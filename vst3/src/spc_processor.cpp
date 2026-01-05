@@ -175,6 +175,52 @@ Steinberg::tresult PLUGIN_API SpcProcessor::process(Steinberg::Vst::ProcessData&
 							}
 							break;
 						}
+						// Handle sample editor parameters
+						case kParamSampleSelect: {
+							selectedSample_ = static_cast<int>(value * 127);
+							break;
+						}
+						case kParamSamplePitch: {
+							// Map 0-1 to -24 to +24 semitones
+							samplePitch_ = static_cast<float>((value - 0.5) * 48.0);
+							if (dotnetHost_ && engineHandle_ && selectedSample_ >= 0) {
+								dotnetHost_->setSamplePitch(engineHandle_, 0, samplePitch_);
+							}
+							break;
+						}
+						case kParamSampleVolume: {
+							sampleVolume_ = static_cast<float>(value);
+							if (dotnetHost_ && engineHandle_ && selectedSample_ >= 0) {
+								dotnetHost_->setSampleVolume(engineHandle_, 0, sampleVolume_);
+							}
+							break;
+						}
+						case kParamSampleAttack: {
+							sampleAdsr_[0] = static_cast<int>(value * 15);
+							updateSampleEnvelope();
+							break;
+						}
+						case kParamSampleDecay: {
+							sampleAdsr_[1] = static_cast<int>(value * 7);
+							updateSampleEnvelope();
+							break;
+						}
+						case kParamSampleSustain: {
+							sampleAdsr_[2] = static_cast<int>(value * 7);
+							updateSampleEnvelope();
+							break;
+						}
+						case kParamSampleRelease: {
+							sampleAdsr_[3] = static_cast<int>(value * 31);
+							updateSampleEnvelope();
+							break;
+						}
+						case kParamSampleTrigger: {
+							if (value > 0.5 && dotnetHost_ && engineHandle_ && selectedSample_ >= 0) {
+								dotnetHost_->triggerSample(engineHandle_, 0, 60, 127); // Voice 0, C4, max velocity
+							}
+							break;
+						}
 					}
 				}
 			}
@@ -231,11 +277,18 @@ Steinberg::tresult PLUGIN_API SpcProcessor::process(Steinberg::Vst::ProcessData&
 	// Call .NET engine to generate interleaved stereo samples
 	dotnetHost_->process(engineHandle_, interleavedBuffer_.data(), numSamples);
 
-	// Deinterleave to VST3 separate channels
+	// Deinterleave to VST3 separate channels and capture for visualization
+	if (waveformLeft_.size() < static_cast<size_t>(numSamples)) {
+		waveformLeft_.resize(numSamples);
+		waveformRight_.resize(numSamples);
+	}
 	for (Steinberg::int32 i = 0; i < numSamples; i++) {
 		leftChannel[i] = interleavedBuffer_[i * 2];
 		rightChannel[i] = interleavedBuffer_[i * 2 + 1];
+		waveformLeft_[i] = leftChannel[i];
+		waveformRight_[i] = rightChannel[i];
 	}
+	waveformSampleCount_ = numSamples;
 
 	return Steinberg::kResultOk;
 }
@@ -284,6 +337,26 @@ Steinberg::tresult PLUGIN_API SpcProcessor::notify(Steinberg::Vst::IMessage* mes
 					sendMessage(reply);
 					reply->release();
 				}
+			}
+		}
+		return Steinberg::kResultOk;
+	}
+
+	if (strcmp(msgId, kMsgRequestWaveform) == 0) {
+		// Send current waveform data to controller
+		int sampleCount = waveformSampleCount_.load();
+		if (sampleCount > 0 && !waveformLeft_.empty()) {
+			if (auto* reply = allocateMessage()) {
+				reply->setMessageID(kMsgWaveformData);
+				// Pack sample count as int32
+				Steinberg::int32 count = static_cast<Steinberg::int32>(std::min(sampleCount, 512));
+				reply->getAttributes()->setInt(kAttrWaveformSamples, count);
+				reply->getAttributes()->setBinary(kAttrWaveformLeft, waveformLeft_.data(),
+					static_cast<Steinberg::uint32>(count * sizeof(float)));
+				reply->getAttributes()->setBinary(kAttrWaveformRight, waveformRight_.data(),
+					static_cast<Steinberg::uint32>(count * sizeof(float)));
+				sendMessage(reply);
+				reply->release();
 			}
 		}
 		return Steinberg::kResultOk;
@@ -491,6 +564,21 @@ void SpcProcessor::processMidiEvents(Steinberg::Vst::IEventList* events) {
 			}
 		}
 	}
+}
+
+void SpcProcessor::updateSampleEnvelope() {
+	if (!dotnetHost_ || !engineHandle_) {
+		return;
+	}
+
+	// Pack ADSR into SPC format: attack (0-15), decay (0-7), sustain (0-7), release (0-31)
+	// ADSR1: [attack:4][decay:3][enable:1]
+	// ADSR2: [sustain:3][release:5]
+	uint8_t adsr1 = static_cast<uint8_t>((sampleAdsr_[0] << 4) | (sampleAdsr_[1] << 1) | 0x80);
+	uint8_t adsr2 = static_cast<uint8_t>((sampleAdsr_[2] << 5) | sampleAdsr_[3]);
+	uint16_t adsrPacked = (adsr1 << 8) | adsr2;
+
+	dotnetHost_->setSampleEnvelope(engineHandle_, 0, adsrPacked);
 }
 
 } // namespace SnesSpc

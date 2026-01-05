@@ -73,6 +73,12 @@ if(SMTG_ENABLE_VSTGUI_SUPPORT)
 		src/gui/preset_browser.h
 		src/gui/spectrum_view.cpp
 		src/gui/spectrum_view.h
+		src/gui/view_switcher.cpp
+		src/gui/view_switcher.h
+		src/gui/keyboard_handler.cpp
+		src/gui/keyboard_handler.h
+		src/gui/midi_learn.cpp
+		src/gui/midi_learn.h
 	)
 endif()
 

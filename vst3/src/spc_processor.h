@@ -8,6 +8,7 @@
 #include "dotnet_host.h"
 #include <memory>
 #include <vector>
+#include <atomic>
 
 namespace SnesSpc {
 
@@ -49,17 +50,31 @@ private:
 	bool voiceEnabled_[8] = { true, true, true, true, true, true, true, true };
 	bool voiceSolo_[8] = { false, false, false, false, false, false, false, false };
 
+	// Sample editor state
+	int selectedSample_ = 0;
+	float samplePitch_ = 0.0f;
+	float sampleVolume_ = 1.0f;
+	int sampleAdsr_[4] = { 15, 7, 7, 0 }; // Attack, Decay, Sustain, Release
+
 	// Sample rate
 	float sampleRate_ = 44100.0f;
 
 	// Interleaved audio buffer for .NET output
 	std::vector<float> interleavedBuffer_;
 
+	// Waveform capture buffer for visualization
+	std::vector<float> waveformLeft_;
+	std::vector<float> waveformRight_;
+	std::atomic<int> waveformSampleCount_{0};
+
 	// Embedded SPC data (for state save/restore)
 	std::vector<uint8_t> embeddedSpcData_;
 
 	// Helper to sync parameters to engine
 	void syncParametersToEngine();
+
+	// Helper to update sample ADSR envelope
+	void updateSampleEnvelope();
 
 	// Process MIDI events
 	void processMidiEvents(Steinberg::Vst::IEventList* events);

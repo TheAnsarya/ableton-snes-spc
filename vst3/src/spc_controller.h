@@ -4,8 +4,14 @@
 #include "pluginterfaces/vst/ivstmessage.h"
 #include "spc_params.h"
 #include "spc_messages.h"
+#include <memory>
+#include <mutex>
+#include <vector>
 
 namespace SnesSpc {
+
+// Forward declaration
+class MidiLearnHandler;
 
 class SpcController : public Steinberg::Vst::EditController {
 public:
@@ -13,6 +19,8 @@ public:
 	static Steinberg::FUnknown* createInstance(void* context) {
 		return static_cast<Steinberg::Vst::IEditController*>(new SpcController());
 	}
+
+	~SpcController() override;
 
 	// EditController overrides
 	Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) override;
@@ -33,9 +41,25 @@ public:
 	bool isSpcLoaded() const { return spcLoaded_; }
 	const std::string& getCurrentSpcPath() const { return currentSpcPath_; }
 
+	// MIDI Learn
+	MidiLearnHandler* getMidiLearnHandler() { return midiLearnHandler_.get(); }
+	void startMidiLearn(int paramId);
+	void cancelMidiLearn();
+	bool processMidiCC(int channel, int ccNumber, int value);
+
+	// Waveform data for visualization
+	void requestWaveformData();
+	bool getWaveformData(std::vector<float>& left, std::vector<float>& right);
+
 private:
 	bool spcLoaded_ = false;
 	std::string currentSpcPath_;
+	std::unique_ptr<MidiLearnHandler> midiLearnHandler_;
+
+	// Waveform data (updated via messages from processor)
+	std::vector<float> waveformLeft_;
+	std::vector<float> waveformRight_;
+	std::mutex waveformMutex_;
 };
 
 } // namespace SnesSpc

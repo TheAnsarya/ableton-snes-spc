@@ -341,6 +341,179 @@ Before testing, ensure the following are complete:
 
 ---
 
+### TC-016: Keyboard Shortcuts
+
+**Objective:** Verify keyboard shortcuts work in plugin GUI
+
+**Steps:**
+1. Load an SPC file
+2. Click inside the plugin GUI to give it focus
+3. Press Space to toggle Play/Pause
+4. Press L to toggle Loop
+5. Press Escape to Stop
+6. Press Up Arrow to increase volume
+7. Press Down Arrow to decrease volume
+8. Press 1-8 to toggle individual voice mute
+9. Press M to mute all voices
+10. Press N to unmute all voices
+11. Press Home to jump to start
+
+**Expected Result:**
+- Space toggles playback state
+- L toggles loop on/off
+- Escape stops playback and resets position
+- Arrow keys adjust master volume by 5%
+- Number keys 1-8 toggle corresponding voice
+- M mutes all 8 voices
+- N unmutes all voices and disables solos
+- Home resets position to beginning
+
+**Pass/Fail:** [ ]
+
+---
+
+### TC-017: View Mode Switching
+
+**Objective:** Verify tab-based view switching works
+
+**Steps:**
+1. Open plugin GUI
+2. Click "Mixer" tab
+3. Verify Mixer panel is visible
+4. Click "Samples" tab
+5. Verify Sample Editor panel is visible
+6. Click "Browser" tab
+7. Verify Preset Browser panel is visible
+8. Switch between tabs multiple times
+
+**Expected Result:**
+- Only one panel visible at a time
+- Transitions are instant (no delay)
+- Active tab is visually highlighted
+- Panel content is preserved when switching back
+
+**Pass/Fail:** [ ]
+
+---
+
+### TC-018: Sample Editor Controls
+
+**Objective:** Verify sample editor parameter controls
+
+**Steps:**
+1. Load an SPC file
+2. Switch to Samples view
+3. Select a sample using the Sample selector (0-127)
+4. Adjust Pitch slider (-24 to +24 semitones)
+5. Adjust Volume slider (0-100%)
+6. Adjust Attack rate (0-15)
+7. Adjust Decay rate (0-7)
+8. Adjust Sustain level (0-7)
+9. Adjust Release rate (0-31)
+10. Click Trigger button
+
+**Expected Result:**
+- Sample selection changes active sample
+- Pitch affects playback frequency
+- Volume affects sample loudness
+- ADSR values pack into SPC format (ADSR1/ADSR2)
+- Trigger button plays the sample once
+
+**Pass/Fail:** [ ]
+
+---
+
+### TC-019: Real-Time Visualization Updates
+
+**Objective:** Verify waveform and spectrum update continuously
+
+**Steps:**
+1. Load an SPC file
+2. Play the track
+3. Watch waveform display for 10 seconds
+4. Switch to view with spectrum analyzer
+5. Watch spectrum for 10 seconds
+6. Pause playback
+
+**Expected Result:**
+- Waveform updates at ~60 FPS
+- Left and right channels visible (different colors)
+- Spectrum shows frequency content
+- Updates stop or flatten when paused
+- No visual stuttering or freezing
+
+**Pass/Fail:** [ ]
+
+---
+
+### TC-020: MIDI Learn Mode
+
+**Objective:** Verify MIDI CC mapping functionality
+
+**Steps:**
+1. Open plugin GUI
+2. Right-click on Master Volume slider (or use MIDI Learn button)
+3. Enter MIDI Learn mode
+4. Move a physical MIDI controller knob/slider
+5. Verify mapping is created
+6. Move the MIDI controller again
+7. Verify parameter responds
+8. Clear the mapping
+9. Verify parameter no longer responds to MIDI
+
+**Expected Result:**
+- MIDI Learn mode indicated visually
+- First CC movement creates the mapping
+- Parameter responds to subsequent CC movements
+- Value range maps 0-127 to parameter range
+- Mappings can be cleared
+
+**Pass/Fail:** [ ]
+
+---
+
+### TC-021: MIDI Learn Persistence
+
+**Objective:** Verify MIDI mappings save and restore
+
+**Steps:**
+1. Create multiple MIDI CC mappings (e.g., volume, mutes)
+2. Save Ableton project
+3. Close Ableton completely
+4. Reopen the project
+5. Verify MIDI controllers still control mapped parameters
+
+**Expected Result:**
+- All MIDI mappings restored
+- No need to reconfigure mappings
+- Mappings work identically to before save
+
+**Pass/Fail:** [ ]
+
+---
+
+### TC-022: Pitch Bend Per Channel
+
+**Objective:** Verify per-channel pitch bend parameters
+
+**Steps:**
+1. Load an SPC file with multiple voices
+2. Adjust Pitch Bend slider for Channel 1
+3. Verify pitch of Channel 1 changes
+4. Set Pitch Bend Range to 12 semitones
+5. Move pitch bend slider to maximum
+6. Verify pitch change is 12 semitones up
+
+**Expected Result:**
+- Pitch bend affects individual channel pitch
+- Center position = no pitch change
+- Pitch bend range controls the semitone range
+- Full bend produces expected semitone offset
+
+**Pass/Fail:** [ ]
+
+---
+
 ## Ableton Live 10.1.43 Specific Tests
 
 ### TC-L10-001: VST3 Loading in Live 10
@@ -394,6 +567,13 @@ Before testing, ensure the following are complete:
 | TC-013 | | | | |
 | TC-014 | | | | |
 | TC-015 | | | | |
+| TC-016 | | | | Keyboard shortcuts |
+| TC-017 | | | | View mode tabs |
+| TC-018 | | | | Sample editor |
+| TC-019 | | | | Real-time visualizations |
+| TC-020 | | | | MIDI learn mode |
+| TC-021 | | | | MIDI learn persistence |
+| TC-022 | | | | Pitch bend per channel |
 | TC-L10-001 | | | | |
 | TC-L10-002 | | | | |
 

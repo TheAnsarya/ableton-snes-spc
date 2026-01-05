@@ -46,3 +46,4 @@ Makefile
 
 # Keep tracked binaries
 !src/**/*.dll
+~references/
