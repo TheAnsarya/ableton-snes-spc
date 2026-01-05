@@ -6,11 +6,14 @@
 
 **Goal**: Basic plugin that loads and plays SPC files
 
-- [ ] Project structure and build system
+- [x] Project structure and build system ✅ (2026-01-05)
+- [x] VST3 SDK integration ✅ (2026-01-05)
+- [x] Basic VST3 wrapper with VSTGUI ✅ (2026-01-05)
+- [x] Custom plugin icon ✅ (2026-01-05)
 - [ ] Core SPC700 CPU emulation
 - [ ] S-DSP audio rendering
 - [ ] BRR sample decoding
-- [ ] Basic VST3 wrapper
+- [ ] .NET Core integration (in progress)
 - [ ] Load SPC file and play audio
 
 ### Phase 2: Core Features (v0.2)
@@ -57,11 +60,13 @@
 
 ## Technical Milestones
 
-### M1: Build System ✓ (This Session)
+### M1: Build System ✅ (2026-01-05)
 
-- CMake + MSBuild hybrid build
-- .NET 10 project structure
-- VST3 SDK integration
+- [x] CMake + MSBuild hybrid build
+- [x] .NET 10 project structure
+- [x] VST3 SDK integration
+- [x] Custom SNES-style plugin icon
+- [x] VSTGUI support enabled (custom views pending API updates)
 
 ### M2: Audio Pipeline
 
