@@ -44,6 +44,14 @@ public sealed class Spc700 {
 		set => _dsp = value;
 	}
 
+	// Test/debug accessors for registers
+	public byte A => _a;
+	public byte X => _x;
+	public byte Y => _y;
+	public ushort PC => _pc;
+	public byte SP => _sp;
+	public byte PSW => _psw;
+
 	/// <summary>
 	/// Resets the CPU to initial state.
 	/// </summary>
@@ -574,13 +582,138 @@ public sealed class Spc700 {
 			0xa0 => Ei(),
 			0xc0 => Di(),
 
+			// Bit operations
+			0x02 => Set1_Dp(0),
+			0x22 => Set1_Dp(1),
+			0x42 => Set1_Dp(2),
+			0x62 => Set1_Dp(3),
+			0x82 => Set1_Dp(4),
+			0xa2 => Set1_Dp(5),
+			0xc2 => Set1_Dp(6),
+			0xe2 => Set1_Dp(7),
+			0x12 => Clr1_Dp(0),
+			0x32 => Clr1_Dp(1),
+			0x52 => Clr1_Dp(2),
+			0x72 => Clr1_Dp(3),
+			0x92 => Clr1_Dp(4),
+			0xb2 => Clr1_Dp(5),
+			0xd2 => Clr1_Dp(6),
+			0xf2 => Clr1_Dp(7),
+
+			// Bit branches (BBC/BBS)
+			0x13 => Bbc(0),
+			0x33 => Bbc(1),
+			0x53 => Bbc(2),
+			0x73 => Bbc(3),
+			0x93 => Bbc(4),
+			0xb3 => Bbc(5),
+			0xd3 => Bbc(6),
+			0xf3 => Bbc(7),
+			0x03 => Bbs(0),
+			0x23 => Bbs(1),
+			0x43 => Bbs(2),
+			0x63 => Bbs(3),
+			0x83 => Bbs(4),
+			0xa3 => Bbs(5),
+			0xc3 => Bbs(6),
+			0xe3 => Bbs(7),
+
+			// Carry bit operations
+			0x0a => Or1_C_Mem(),
+			0x2a => Or1_C_NotMem(),
+			0x4a => And1_C_Mem(),
+			0x6a => And1_C_NotMem(),
+			0x8a => Eor1_C_Mem(),
+			0xaa => Mov1_C_Mem(),
+			0xca => Mov1_Mem_C(),
+			0xea => Not1_Mem(),
+
+			// TSET1/TCLR1
+			0x0e => Tset1_Abs(),
+			0x4e => Tclr1_Abs(),
+
+			// MUL/DIV
+			0xcf => Mul_YA(),
+			0x9e => Div_YA_X(),
+
+			// 16-bit operations
+			0x3a => Incw_Dp(),
+			0x1a => Decw_Dp(),
+			0x7a => Addw_YA_Dp(),
+			0x9a => Subw_YA_Dp(),
+			0x5a => Cmpw_YA_Dp(),
+			0xba => Movw_YA_Dp(),
+			0xda => Movw_Dp_YA(),
+
+			// Decimal adjust
+			0xdf => Daa(),
+			0xbe => Das(),
+
+			// XCN (exchange nibbles)
+			0x9f => Xcn_A(),
+
+			// CBNE (compare and branch if not equal)
+			0x2e => Cbne_Dp(),
+			0xde => Cbne_DpX(),
+
+			// DBNZ (decrement and branch if not zero)
+			0x6e => Dbnz_Dp(),
+			0xfe => Dbnz_Y(),
+
+			// TCALL (table call)
+			0x01 => Tcall(0),
+			0x11 => Tcall(1),
+			0x21 => Tcall(2),
+			0x31 => Tcall(3),
+			0x41 => Tcall(4),
+			0x51 => Tcall(5),
+			0x61 => Tcall(6),
+			0x71 => Tcall(7),
+			0x81 => Tcall(8),
+			0x91 => Tcall(9),
+			0xa1 => Tcall(10),
+			0xb1 => Tcall(11),
+			0xc1 => Tcall(12),
+			0xd1 => Tcall(13),
+			0xe1 => Tcall(14),
+			0xf1 => Tcall(15),
+
+			// PCALL (page call)
+			0x4f => Pcall(),
+
+			// BRK
+			0x0f => Brk(),
+
+			// ADC/SBC dp,dp and dp,#imm
+			0x89 => Adc_Dp_Dp(),
+			0x98 => Adc_Dp_Imm(),
+			0xa9 => Sbc_Dp_Dp(),
+			0xb8 => Sbc_Dp_Imm(),
+
+			// CMP dp,dp and dp,#imm
+			0x69 => Cmp_Dp_Dp(),
+			0x78 => Cmp_Dp_Imm(),
+
+			// AND/OR/EOR dp,dp and dp,#imm
+			0x29 => And_Dp_Dp(),
+			0x38 => And_Dp_Imm(),
+			0x09 => Or_Dp_Dp(),
+			0x18 => Or_Dp_Imm(),
+			0x49 => Eor_Dp_Dp(),
+			0x58 => Eor_Dp_Imm(),
+
+			// (X),(Y) operations
+			0x99 => Adc_IndX_IndY(),
+			0xb9 => Sbc_IndX_IndY(),
+			0x79 => Cmp_IndX_IndY(),
+			0x39 => And_IndX_IndY(),
+			0x19 => Or_IndX_IndY(),
+			0x59 => Eor_IndX_IndY(),
+
 			// Special
 			0x00 => Nop(),
 			0xef => Sleep(),
 			0xff => Stop(),
-
-			// Default - unimplemented opcode
-			_ => UnimplementedOpcode(opcode),
 		};
 	}
 
@@ -820,6 +953,438 @@ public sealed class Spc700 {
 		// Log or handle unimplemented opcode
 		// For now, just consume 2 cycles and continue
 		return 2;
+	}
+
+	#endregion
+
+	#region Bit Operations
+
+	private int Set1_Dp(int bit) {
+		int addr = DpAddress(FetchByte());
+		WriteByte(addr, (byte)(ReadByte(addr) | (1 << bit)));
+		return 4;
+	}
+
+	private int Clr1_Dp(int bit) {
+		int addr = DpAddress(FetchByte());
+		WriteByte(addr, (byte)(ReadByte(addr) & ~(1 << bit)));
+		return 4;
+	}
+
+	private int Bbs(int bit) {
+		byte dp = FetchByte();
+		sbyte offset = (sbyte)FetchByte();
+		if ((ReadByte(DpAddress(dp)) & (1 << bit)) != 0) {
+			_pc = (ushort)(_pc + offset);
+			return 7;
+		}
+		return 5;
+	}
+
+	private int Bbc(int bit) {
+		byte dp = FetchByte();
+		sbyte offset = (sbyte)FetchByte();
+		if ((ReadByte(DpAddress(dp)) & (1 << bit)) == 0) {
+			_pc = (ushort)(_pc + offset);
+			return 7;
+		}
+		return 5;
+	}
+
+	private (int addr, int bit) FetchMemBit() {
+		ushort word = FetchWord();
+		return (word & 0x1fff, word >> 13);
+	}
+
+	private int Or1_C_Mem() {
+		var (addr, bit) = FetchMemBit();
+		if ((ReadByte(addr) & (1 << bit)) != 0) CarryFlag = true;
+		return 5;
+	}
+
+	private int Or1_C_NotMem() {
+		var (addr, bit) = FetchMemBit();
+		if ((ReadByte(addr) & (1 << bit)) == 0) CarryFlag = true;
+		return 5;
+	}
+
+	private int And1_C_Mem() {
+		var (addr, bit) = FetchMemBit();
+		if ((ReadByte(addr) & (1 << bit)) == 0) CarryFlag = false;
+		return 4;
+	}
+
+	private int And1_C_NotMem() {
+		var (addr, bit) = FetchMemBit();
+		if ((ReadByte(addr) & (1 << bit)) != 0) CarryFlag = false;
+		return 4;
+	}
+
+	private int Eor1_C_Mem() {
+		var (addr, bit) = FetchMemBit();
+		if ((ReadByte(addr) & (1 << bit)) != 0) CarryFlag = !CarryFlag;
+		return 5;
+	}
+
+	private int Mov1_C_Mem() {
+		var (addr, bit) = FetchMemBit();
+		CarryFlag = (ReadByte(addr) & (1 << bit)) != 0;
+		return 4;
+	}
+
+	private int Mov1_Mem_C() {
+		var (addr, bit) = FetchMemBit();
+		byte val = ReadByte(addr);
+		if (CarryFlag) val |= (byte)(1 << bit);
+		else val &= (byte)~(1 << bit);
+		WriteByte(addr, val);
+		return 6;
+	}
+
+	private int Not1_Mem() {
+		var (addr, bit) = FetchMemBit();
+		WriteByte(addr, (byte)(ReadByte(addr) ^ (1 << bit)));
+		return 5;
+	}
+
+	private int Tset1_Abs() {
+		int addr = FetchWord();
+		byte val = ReadByte(addr);
+		SetNZ((byte)(_a - val));
+		WriteByte(addr, (byte)(val | _a));
+		return 6;
+	}
+
+	private int Tclr1_Abs() {
+		int addr = FetchWord();
+		byte val = ReadByte(addr);
+		SetNZ((byte)(_a - val));
+		WriteByte(addr, (byte)(val & ~_a));
+		return 6;
+	}
+
+	#endregion
+
+	#region MUL/DIV Operations
+
+	private int Mul_YA() {
+		ushort result = (ushort)(_y * _a);
+		_a = (byte)(result & 0xff);
+		_y = (byte)(result >> 8);
+		SetNZ(_y);
+		return 9;
+	}
+
+	private int Div_YA_X() {
+		if (_x == 0) {
+			// Division by zero
+			_a = 0xff;
+			_y = 0xff;
+			OverflowFlag = true;
+			HalfCarryFlag = true;
+		} else {
+			ushort ya = (ushort)((_y << 8) | _a);
+			OverflowFlag = _y >= _x;
+			HalfCarryFlag = (_y & 0x0f) >= (_x & 0x0f);
+			_a = (byte)(ya / _x);
+			_y = (byte)(ya % _x);
+		}
+		SetNZ(_a);
+		return 12;
+	}
+
+	#endregion
+
+	#region 16-bit Operations
+
+	private ushort GetYA() => (ushort)((_y << 8) | _a);
+	private void SetYA(ushort value) { _a = (byte)(value & 0xff); _y = (byte)(value >> 8); }
+
+	private int Incw_Dp() {
+		int addr = DpAddress(FetchByte());
+		ushort val = (ushort)(ReadWord(addr) + 1);
+		WriteWord(addr, val);
+		SetNZ16(val);
+		return 6;
+	}
+
+	private int Decw_Dp() {
+		int addr = DpAddress(FetchByte());
+		ushort val = (ushort)(ReadWord(addr) - 1);
+		WriteWord(addr, val);
+		SetNZ16(val);
+		return 6;
+	}
+
+	private int Addw_YA_Dp() {
+		ushort ya = GetYA();
+		ushort mem = ReadWord(DpAddress(FetchByte()));
+		int result = ya + mem;
+		CarryFlag = result > 0xffff;
+		OverflowFlag = ((~(ya ^ mem) & (ya ^ result)) & 0x8000) != 0;
+		HalfCarryFlag = ((ya & 0x0fff) + (mem & 0x0fff)) > 0x0fff;
+		SetYA((ushort)result);
+		SetNZ16(GetYA());
+		return 5;
+	}
+
+	private int Subw_YA_Dp() {
+		ushort ya = GetYA();
+		ushort mem = ReadWord(DpAddress(FetchByte()));
+		int result = ya - mem;
+		CarryFlag = result >= 0;
+		OverflowFlag = (((ya ^ mem) & (ya ^ result)) & 0x8000) != 0;
+		HalfCarryFlag = ((ya & 0x0fff) - (mem & 0x0fff)) >= 0;
+		SetYA((ushort)result);
+		SetNZ16(GetYA());
+		return 5;
+	}
+
+	private int Cmpw_YA_Dp() {
+		ushort ya = GetYA();
+		ushort mem = ReadWord(DpAddress(FetchByte()));
+		int result = ya - mem;
+		CarryFlag = result >= 0;
+		SetNZ16((ushort)result);
+		return 4;
+	}
+
+	private int Movw_YA_Dp() {
+		SetYA(ReadWord(DpAddress(FetchByte())));
+		SetNZ16(GetYA());
+		return 5;
+	}
+
+	private int Movw_Dp_YA() {
+		WriteWord(DpAddress(FetchByte()), GetYA());
+		return 5;
+	}
+
+	#endregion
+
+	#region Decimal Adjust
+
+	private int Daa() {
+		if ((_a & 0x0f) > 9 || HalfCarryFlag) {
+			_a += 6;
+			if (_a < 6) CarryFlag = true;
+		}
+		if (_a > 0x9f || CarryFlag) {
+			_a += 0x60;
+			CarryFlag = true;
+		}
+		SetNZ(_a);
+		return 3;
+	}
+
+	private int Das() {
+		if ((_a & 0x0f) > 9 || !HalfCarryFlag) {
+			_a -= 6;
+		}
+		if (_a > 0x9f || !CarryFlag) {
+			_a -= 0x60;
+			CarryFlag = false;
+		}
+		SetNZ(_a);
+		return 3;
+	}
+
+	#endregion
+
+	#region Misc Instructions
+
+	private int Xcn_A() {
+		_a = (byte)((_a >> 4) | (_a << 4));
+		SetNZ(_a);
+		return 5;
+	}
+
+	private int Cbne_Dp() {
+		byte dp = FetchByte();
+		sbyte offset = (sbyte)FetchByte();
+		if (_a != ReadByte(DpAddress(dp))) {
+			_pc = (ushort)(_pc + offset);
+			return 7;
+		}
+		return 5;
+	}
+
+	private int Cbne_DpX() {
+		byte dp = FetchByte();
+		sbyte offset = (sbyte)FetchByte();
+		if (_a != ReadByte(DpAddress((byte)(dp + _x)))) {
+			_pc = (ushort)(_pc + offset);
+			return 8;
+		}
+		return 6;
+	}
+
+	private int Dbnz_Dp() {
+		byte dp = FetchByte();
+		sbyte offset = (sbyte)FetchByte();
+		int addr = DpAddress(dp);
+		byte val = (byte)(ReadByte(addr) - 1);
+		WriteByte(addr, val);
+		if (val != 0) {
+			_pc = (ushort)(_pc + offset);
+			return 7;
+		}
+		return 5;
+	}
+
+	private int Dbnz_Y() {
+		sbyte offset = (sbyte)FetchByte();
+		_y--;
+		if (_y != 0) {
+			_pc = (ushort)(_pc + offset);
+			return 6;
+		}
+		return 4;
+	}
+
+	private int Tcall(int n) {
+		PushWord(_pc);
+		_pc = ReadWord(0xffde - (n * 2));
+		return 8;
+	}
+
+	private int Pcall() {
+		byte page = FetchByte();
+		PushWord(_pc);
+		_pc = (ushort)(0xff00 | page);
+		return 6;
+	}
+
+	private int Brk() {
+		PushWord(_pc);
+		PushByte(_psw);
+		_pc = ReadWord(0xffde);
+		BreakFlag = true;
+		InterruptFlag = false;
+		return 8;
+	}
+
+	#endregion
+
+	#region Memory-to-Memory ALU Operations
+
+	private int Adc_Dp_Dp() {
+		byte src = ReadByte(DpAddress(FetchByte()));
+		int dstAddr = DpAddress(FetchByte());
+		WriteByte(dstAddr, Adc(ReadByte(dstAddr), src));
+		return 6;
+	}
+
+	private int Adc_Dp_Imm() {
+		byte imm = FetchByte();
+		int addr = DpAddress(FetchByte());
+		WriteByte(addr, Adc(ReadByte(addr), imm));
+		return 5;
+	}
+
+	private int Sbc_Dp_Dp() {
+		byte src = ReadByte(DpAddress(FetchByte()));
+		int dstAddr = DpAddress(FetchByte());
+		WriteByte(dstAddr, Sbc(ReadByte(dstAddr), src));
+		return 6;
+	}
+
+	private int Sbc_Dp_Imm() {
+		byte imm = FetchByte();
+		int addr = DpAddress(FetchByte());
+		WriteByte(addr, Sbc(ReadByte(addr), imm));
+		return 5;
+	}
+
+	private int Cmp_Dp_Dp() {
+		byte src = ReadByte(DpAddress(FetchByte()));
+		int dstAddr = DpAddress(FetchByte());
+		Cmp(ReadByte(dstAddr), src);
+		return 6;
+	}
+
+	private int Cmp_Dp_Imm() {
+		byte imm = FetchByte();
+		int addr = DpAddress(FetchByte());
+		Cmp(ReadByte(addr), imm);
+		return 5;
+	}
+
+	private int And_Dp_Dp() {
+		byte src = ReadByte(DpAddress(FetchByte()));
+		int dstAddr = DpAddress(FetchByte());
+		WriteByte(dstAddr, And(ReadByte(dstAddr), src));
+		return 6;
+	}
+
+	private int And_Dp_Imm() {
+		byte imm = FetchByte();
+		int addr = DpAddress(FetchByte());
+		WriteByte(addr, And(ReadByte(addr), imm));
+		return 5;
+	}
+
+	private int Or_Dp_Dp() {
+		byte src = ReadByte(DpAddress(FetchByte()));
+		int dstAddr = DpAddress(FetchByte());
+		WriteByte(dstAddr, Or(ReadByte(dstAddr), src));
+		return 6;
+	}
+
+	private int Or_Dp_Imm() {
+		byte imm = FetchByte();
+		int addr = DpAddress(FetchByte());
+		WriteByte(addr, Or(ReadByte(addr), imm));
+		return 5;
+	}
+
+	private int Eor_Dp_Dp() {
+		byte src = ReadByte(DpAddress(FetchByte()));
+		int dstAddr = DpAddress(FetchByte());
+		WriteByte(dstAddr, Eor(ReadByte(dstAddr), src));
+		return 6;
+	}
+
+	private int Eor_Dp_Imm() {
+		byte imm = FetchByte();
+		int addr = DpAddress(FetchByte());
+		WriteByte(addr, Eor(ReadByte(addr), imm));
+		return 5;
+	}
+
+	private int Adc_IndX_IndY() {
+		byte val = Adc(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
+		WriteByte(DpAddress(_x), val);
+		return 5;
+	}
+
+	private int Sbc_IndX_IndY() {
+		byte val = Sbc(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
+		WriteByte(DpAddress(_x), val);
+		return 5;
+	}
+
+	private int Cmp_IndX_IndY() {
+		Cmp(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
+		return 5;
+	}
+
+	private int And_IndX_IndY() {
+		byte val = And(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
+		WriteByte(DpAddress(_x), val);
+		return 5;
+	}
+
+	private int Or_IndX_IndY() {
+		byte val = Or(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
+		WriteByte(DpAddress(_x), val);
+		return 5;
+	}
+
+	private int Eor_IndX_IndY() {
+		byte val = Eor(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
+		WriteByte(DpAddress(_x), val);
+		return 5;
 	}
 
 	#endregion
