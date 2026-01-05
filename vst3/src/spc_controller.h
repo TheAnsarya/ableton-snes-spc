@@ -20,9 +20,18 @@ public:
 	Steinberg::tresult PLUGIN_API setComponentState(Steinberg::IBStream* state) override;
 	Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) override;
 
+#if VSTGUI_ENABLE
+	// Create editor view
+	Steinberg::IPlugView* PLUGIN_API createView(Steinberg::FIDString name) override;
+#endif
+
 	// Public methods for UI to call
 	bool loadSpcFile(const char* filePath);
 	bool loadSpcData(const uint8_t* data, int length);
+
+	// State accessors for UI
+	bool isSpcLoaded() const { return spcLoaded_; }
+	const std::string& getCurrentSpcPath() const { return currentSpcPath_; }
 
 private:
 	bool spcLoaded_ = false;

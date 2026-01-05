@@ -4,6 +4,10 @@
 #include "pluginterfaces/base/ibstream.h"
 #include <cstring>
 
+#if VSTGUI_ENABLE
+#include "gui/spc_editor.h"
+#endif
+
 namespace SnesSpc {
 
 Steinberg::tresult PLUGIN_API SpcController::initialize(Steinberg::FUnknown* context) {
@@ -199,5 +203,14 @@ bool SpcController::loadSpcData(const uint8_t* data, int length) {
 	}
 	return false;
 }
+
+#if VSTGUI_ENABLE
+Steinberg::IPlugView* PLUGIN_API SpcController::createView(Steinberg::FIDString name) {
+	if (Steinberg::FIDStringsEqual(name, Steinberg::Vst::ViewType::kEditor)) {
+		return new SpcEditor(this, "SpcEditorView", "spc_editor.uidesc");
+	}
+	return nullptr;
+}
+#endif
 
 } // namespace SnesSpc

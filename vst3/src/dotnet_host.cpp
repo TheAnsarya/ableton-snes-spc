@@ -77,6 +77,16 @@ bool DotNetHost::initialize(const char* libraryPath) {
 	midiSetPitchBendRangeFunc_ = loadFunction<MidiSetPitchBendRangeFunc>("spc_midi_set_pitch_bend_range");
 	midiResetFunc_ = loadFunction<MidiResetFunc>("spc_midi_reset");
 
+	// Sample editing functions (optional - may not be present in all builds)
+	triggerSampleFunc_ = loadFunction<TriggerSampleFunc>("spc_trigger_sample");
+	stopVoiceFunc_ = loadFunction<StopVoiceFunc>("spc_stop_voice");
+	setSamplePitchFunc_ = loadFunction<SetSamplePitchFunc>("spc_set_sample_pitch");
+	setSampleVolumeFunc_ = loadFunction<SetSampleVolumeFunc>("spc_set_sample_volume");
+	setSampleEnvelopeFunc_ = loadFunction<SetSampleEnvelopeFunc>("spc_set_sample_envelope");
+	getSampleCountFunc_ = loadFunction<GetSampleCountFunc>("spc_get_sample_count");
+	getSamplePcmDataFunc_ = loadFunction<GetSamplePcmDataFunc>("spc_get_sample_pcm");
+	getSampleInfoFunc_ = loadFunction<GetSampleInfoFunc>("spc_get_sample_info");
+
 	// At minimum we need create, destroy, and process
 	if (!createEngineFunc_ || !destroyEngineFunc_ || !processFunc_) {
 		shutdown();
@@ -130,6 +140,16 @@ void DotNetHost::shutdown() {
 	midiPitchBendFunc_ = nullptr;
 	midiSetPitchBendRangeFunc_ = nullptr;
 	midiResetFunc_ = nullptr;
+
+	// Sample editing
+	triggerSampleFunc_ = nullptr;
+	stopVoiceFunc_ = nullptr;
+	setSamplePitchFunc_ = nullptr;
+	setSampleVolumeFunc_ = nullptr;
+	setSampleEnvelopeFunc_ = nullptr;
+	getSampleCountFunc_ = nullptr;
+	getSamplePcmDataFunc_ = nullptr;
+	getSampleInfoFunc_ = nullptr;
 }
 
 // === Engine Lifecycle ===
@@ -385,6 +405,59 @@ void DotNetHost::midiReset(intptr_t engine) {
 	if (midiResetFunc_ && engine) {
 		midiResetFunc_(engine);
 	}
+}
+
+// === Sample Editing ===
+
+void DotNetHost::triggerSample(intptr_t engine, int voice, int sourceNumber) {
+	if (triggerSampleFunc_ && engine) {
+		triggerSampleFunc_(engine, voice, sourceNumber);
+	}
+}
+
+void DotNetHost::stopVoice(intptr_t engine, int voice) {
+	if (stopVoiceFunc_ && engine) {
+		stopVoiceFunc_(engine, voice);
+	}
+}
+
+void DotNetHost::setSamplePitch(intptr_t engine, int voice, float pitchMultiplier) {
+	if (setSamplePitchFunc_ && engine) {
+		setSamplePitchFunc_(engine, voice, pitchMultiplier);
+	}
+}
+
+void DotNetHost::setSampleVolume(intptr_t engine, int voice, float left, float right) {
+	if (setSampleVolumeFunc_ && engine) {
+		setSampleVolumeFunc_(engine, voice, left, right);
+	}
+}
+
+void DotNetHost::setSampleEnvelope(intptr_t engine, int voice, int attack, int decay, int sustain, int release) {
+	if (setSampleEnvelopeFunc_ && engine) {
+		setSampleEnvelopeFunc_(engine, voice, attack, decay, sustain, release);
+	}
+}
+
+int DotNetHost::getSampleCount(intptr_t engine) {
+	if (getSampleCountFunc_ && engine) {
+		return getSampleCountFunc_(engine);
+	}
+	return 0;
+}
+
+int DotNetHost::getSamplePcmData(intptr_t engine, int sourceNumber, int16_t* buffer, int maxSamples) {
+	if (getSamplePcmDataFunc_ && engine && buffer) {
+		return getSamplePcmDataFunc_(engine, sourceNumber, buffer, maxSamples);
+	}
+	return 0;
+}
+
+int DotNetHost::getSampleInfo(intptr_t engine, int sourceNumber, int* startAddr, int* loopAddr, int* hasLoop) {
+	if (getSampleInfoFunc_ && engine) {
+		return getSampleInfoFunc_(engine, sourceNumber, startAddr, loopAddr, hasLoop);
+	}
+	return 0;
 }
 
 } // namespace SnesSpc

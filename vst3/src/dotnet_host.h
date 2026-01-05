@@ -79,6 +79,18 @@ public:
 	void midiSetPitchBendRange(intptr_t engine, int semitones);
 	void midiReset(intptr_t engine);
 
+	// === Sample Editing ===
+	void triggerSample(intptr_t engine, int voice, int sourceNumber);
+	void stopVoice(intptr_t engine, int voice);
+	void setSamplePitch(intptr_t engine, int voice, float pitchMultiplier);
+	void setSampleVolume(intptr_t engine, int voice, float left, float right);
+	void setSampleEnvelope(intptr_t engine, int voice, int attack, int decay, int sustain, int release);
+
+	// Sample data access
+	int getSampleCount(intptr_t engine);
+	int getSamplePcmData(intptr_t engine, int sourceNumber, int16_t* buffer, int maxSamples);
+	int getSampleInfo(intptr_t engine, int sourceNumber, int* startAddr, int* loopAddr, int* hasLoop);
+
 private:
 	void* libraryHandle_ = nullptr;
 
@@ -121,6 +133,16 @@ private:
 	using MidiSetPitchBendRangeFunc = void (*)(intptr_t, int);
 	using MidiResetFunc = void (*)(intptr_t);
 
+	// Sample editing function types
+	using TriggerSampleFunc = void (*)(intptr_t, int, int);
+	using StopVoiceFunc = void (*)(intptr_t, int);
+	using SetSamplePitchFunc = void (*)(intptr_t, int, float);
+	using SetSampleVolumeFunc = void (*)(intptr_t, int, float, float);
+	using SetSampleEnvelopeFunc = void (*)(intptr_t, int, int, int, int, int);
+	using GetSampleCountFunc = int (*)(intptr_t);
+	using GetSamplePcmDataFunc = int (*)(intptr_t, int, int16_t*, int);
+	using GetSampleInfoFunc = int (*)(intptr_t, int, int*, int*, int*);
+
 	CreateEngineFunc createEngineFunc_ = nullptr;
 	DestroyEngineFunc destroyEngineFunc_ = nullptr;
 	LoadSpcDataFunc loadSpcDataFunc_ = nullptr;
@@ -158,6 +180,16 @@ private:
 	MidiPitchBendFunc midiPitchBendFunc_ = nullptr;
 	MidiSetPitchBendRangeFunc midiSetPitchBendRangeFunc_ = nullptr;
 	MidiResetFunc midiResetFunc_ = nullptr;
+
+	// Sample editing function pointers
+	TriggerSampleFunc triggerSampleFunc_ = nullptr;
+	StopVoiceFunc stopVoiceFunc_ = nullptr;
+	SetSamplePitchFunc setSamplePitchFunc_ = nullptr;
+	SetSampleVolumeFunc setSampleVolumeFunc_ = nullptr;
+	SetSampleEnvelopeFunc setSampleEnvelopeFunc_ = nullptr;
+	GetSampleCountFunc getSampleCountFunc_ = nullptr;
+	GetSamplePcmDataFunc getSamplePcmDataFunc_ = nullptr;
+	GetSampleInfoFunc getSampleInfoFunc_ = nullptr;
 
 	// Helper to load function pointer
 	template<typename T>

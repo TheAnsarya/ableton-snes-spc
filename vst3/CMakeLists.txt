@@ -67,6 +67,10 @@ if(SMTG_ENABLE_VSTGUI_SUPPORT)
 	list(APPEND PLUGIN_SOURCES
 		src/gui/spc_editor.cpp
 		src/gui/spc_editor.h
+		src/gui/waveform_view.cpp
+		src/gui/waveform_view.h
+		src/gui/preset_browser.cpp
+		src/gui/preset_browser.h
 	)
 endif()
 

@@ -122,10 +122,18 @@ ninja
 |--------|-------------|---------|
 | `USE_NATIVE_AOT` | Use Native AOT compiled .NET library | OFF |
 | `BUILD_TESTS` | Build VST3 validator tests | OFF |
+| `SMTG_ENABLE_VSTGUI_SUPPORT` | Enable VSTGUI for plugin GUI | ON |
 
 Example with options:
 ```bash
-cmake .. -DUSE_NATIVE_AOT=ON -DBUILD_TESTS=ON
+cmake .. -DUSE_NATIVE_AOT=ON -DBUILD_TESTS=ON -DSMTG_ENABLE_VSTGUI_SUPPORT=ON
+```
+
+### Build Without GUI
+
+To build a headless version (no GUI, smaller binary):
+```bash
+cmake .. -DSMTG_ENABLE_VSTGUI_SUPPORT=OFF
 ```
 
 ## Installation
@@ -199,8 +207,40 @@ The controller provides methods for UI integration:
 - [x] Pitch bend support
 - [x] State save/restore with embedded SPC
 - [x] File load messaging system
-- [ ] GUI (planned: VSTGUI or custom)
+- [x] GUI with VSTGUI
+  - [x] Drag-and-drop SPC file loading
+  - [x] 8-channel mixer with volume/mute/solo
+  - [x] Waveform display
+  - [x] Preset browser
+- [x] Sample editing bridge
 - [ ] Native AOT validation tests
+
+## GUI Components
+
+### SpcEditor (`src/gui/spc_editor.h`)
+Main plugin view implementing `VST3Editor` with drag-and-drop:
+- Supports `.spc`, `.rsn`, `.spcx` file types
+- Communicates with processor via message system
+
+### WaveformView (`src/gui/waveform_view.h`)
+Custom VSTGUI view for audio visualization:
+- Time-domain waveform display
+- BRR block visualization mode
+- Zoom and pan controls
+- Selection support
+
+### PresetBrowser (`src/gui/preset_browser.h`)
+List view for browsing SPC files:
+- Directory scanning with recursive search
+- Filter by name/game
+- Recent presets tracking
+- Favorites support
+
+### UI Layout (`resource/spc_editor.uidesc`)
+VSTGUI XML description:
+- 800x500 default size (resizable to 1200x800)
+- Dark theme with accent colors
+- Transport controls, waveform, and 8-channel mixer
 
 ## Troubleshooting
 
