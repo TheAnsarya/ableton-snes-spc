@@ -191,7 +191,7 @@ Steinberg::tresult PLUGIN_API SpcProcessor::process(Steinberg::Vst::ProcessData&
 						case kParamSampleVolume: {
 							sampleVolume_ = static_cast<float>(value);
 							if (dotnetHost_ && engineHandle_ && selectedSample_ >= 0) {
-								dotnetHost_->setSampleVolume(engineHandle_, 0, sampleVolume_);
+								dotnetHost_->setSampleVolume(engineHandle_, 0, sampleVolume_, sampleVolume_);
 							}
 							break;
 						}
@@ -217,7 +217,7 @@ Steinberg::tresult PLUGIN_API SpcProcessor::process(Steinberg::Vst::ProcessData&
 						}
 						case kParamSampleTrigger: {
 							if (value > 0.5 && dotnetHost_ && engineHandle_ && selectedSample_ >= 0) {
-								dotnetHost_->triggerSample(engineHandle_, 0, 60, 127); // Voice 0, C4, max velocity
+								dotnetHost_->triggerSample(engineHandle_, 0, selectedSample_); // Voice 0, selected sample
 							}
 							break;
 						}

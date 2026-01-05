@@ -56,17 +56,28 @@
 		<control-tag name="Vol5" tag="305"/>
 		<control-tag name="Vol6" tag="306"/>
 		<control-tag name="Vol7" tag="307"/>
-		<!-- Sample Editor Controls -->
-		<control-tag name="SampleSelect" tag="400"/>
-		<control-tag name="SamplePitch" tag="401"/>
-		<control-tag name="SampleVolume" tag="402"/>
-		<control-tag name="SampleAttack" tag="403"/>
-		<control-tag name="SampleDecay" tag="404"/>
-		<control-tag name="SampleSustain" tag="405"/>
-		<control-tag name="SampleRelease" tag="406"/>
-		<control-tag name="SampleTrigger" tag="407"/>
+		<!-- Pitch Bend Controls (400-407) -->
+		<control-tag name="PitchBend0" tag="400"/>
+		<control-tag name="PitchBend1" tag="401"/>
+		<control-tag name="PitchBend2" tag="402"/>
+		<control-tag name="PitchBend3" tag="403"/>
+		<control-tag name="PitchBend4" tag="404"/>
+		<control-tag name="PitchBend5" tag="405"/>
+		<control-tag name="PitchBend6" tag="406"/>
+		<control-tag name="PitchBend7" tag="407"/>
+		<!-- Pitch Bend Range -->
+		<control-tag name="PitchBendRange" tag="500"/>
+		<!-- Sample Editor Controls (600-607) -->
+		<control-tag name="SampleSelect" tag="600"/>
+		<control-tag name="SamplePitch" tag="601"/>
+		<control-tag name="SampleVolume" tag="602"/>
+		<control-tag name="SampleAttack" tag="603"/>
+		<control-tag name="SampleDecay" tag="604"/>
+		<control-tag name="SampleSustain" tag="605"/>
+		<control-tag name="SampleRelease" tag="606"/>
+		<control-tag name="SampleTrigger" tag="607"/>
 		<!-- View Mode -->
-		<control-tag name="ViewMode" tag="500"/>
+		<control-tag name="ViewMode" tag="700"/>
 	</control-tags>
 
 	<template name="SpcEditorView" minSize="900, 600" maxSize="1400, 900" size="900, 600" background-color="bg-color">
