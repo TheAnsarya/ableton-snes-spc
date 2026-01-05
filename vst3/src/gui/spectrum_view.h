@@ -75,8 +75,15 @@ private:
 	bool showPeaks_ = true;
 	bool logScale_ = true;
 
+	// Pre-computed lookup tables for optimization
+	std::vector<float> hannWindow_;
+	std::vector<std::vector<std::complex<float>>> twiddleFactors_;
+	std::vector<size_t> bitReverseLUT_;
+
 	// Simple in-place FFT (Cooley-Tukey radix-2)
 	void fft(std::vector<std::complex<float>>& data);
+	void fftOptimized(std::vector<std::complex<float>>& data);
+	void precomputeTwiddleFactors();
 	static size_t reverseBits(size_t n, size_t bits);
 };
 

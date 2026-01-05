@@ -4,6 +4,7 @@
 		<font name="title-font" font-name="Arial" size="18" bold="true"/>
 		<font name="label-font" font-name="Arial" size="12"/>
 		<font name="value-font" font-name="Arial" size="11"/>
+		<font name="small-font" font-name="Arial" size="10"/>
 	</fonts>
 
 	<colors>
@@ -19,6 +20,11 @@
 		<color name="drop-zone" rgba="#4a9f4f30"/>
 		<color name="waveform-bg" rgba="#1e1e1eff"/>
 		<color name="waveform-line" rgba="#4a9fffff"/>
+		<color name="spectrum-bg" rgba="#1a1a1aff"/>
+		<color name="spectrum-bar" rgba="#4a9fffff"/>
+		<color name="spectrum-peak" rgba="#ffc864ff"/>
+		<color name="sample-editor-bg" rgba="#252525ff"/>
+		<color name="sample-highlight" rgba="#4a9fff40"/>
 	</colors>
 
 	<control-tags>
@@ -50,14 +56,30 @@
 		<control-tag name="Vol5" tag="305"/>
 		<control-tag name="Vol6" tag="306"/>
 		<control-tag name="Vol7" tag="307"/>
+		<!-- Sample Editor Controls -->
+		<control-tag name="SampleSelect" tag="400"/>
+		<control-tag name="SamplePitch" tag="401"/>
+		<control-tag name="SampleVolume" tag="402"/>
+		<control-tag name="SampleAttack" tag="403"/>
+		<control-tag name="SampleDecay" tag="404"/>
+		<control-tag name="SampleSustain" tag="405"/>
+		<control-tag name="SampleRelease" tag="406"/>
+		<control-tag name="SampleTrigger" tag="407"/>
+		<!-- View Mode -->
+		<control-tag name="ViewMode" tag="500"/>
 	</control-tags>
 
-	<template name="SpcEditorView" minSize="800, 500" maxSize="1200, 800" size="800, 500" background-color="bg-color">
+	<template name="SpcEditorView" minSize="900, 600" maxSize="1400, 900" size="900, 600" background-color="bg-color">
 		<!-- Title Bar -->
-		<view class="CViewContainer" origin="0, 0" size="800, 40" background-color="panel-color">
+		<view class="CViewContainer" origin="0, 0" size="900, 40" background-color="panel-color">
 			<view class="CTextLabel" origin="10, 8" size="200, 24"
 				  text="SNES SPC Player" font="title-font"
 				  text-alignment="left" font-color="text-color"/>
+			<!-- View Mode Tabs -->
+			<view class="CSegmentButton" origin="600, 8" size="290, 24"
+				  control-tag="ViewMode" default-value="0"
+				  font="label-font" text-color="text-color"
+				  segment-names="Mixer,Samples,Browser"/>
 		</view>
 
 		<!-- Transport Controls -->
@@ -81,135 +103,273 @@
 		</view>
 
 		<!-- Drop Zone / Waveform Display -->
-		<view class="CViewContainer" origin="200, 50" size="590, 100" background-color="panel-color">
+		<view class="CViewContainer" origin="200, 50" size="690, 100" background-color="panel-color">
 			<!-- Waveform display area -->
-			<view class="WaveformView" origin="5, 5" size="480, 90"
+			<view class="WaveformView" origin="5, 5" size="400, 90"
 				  background-color="waveform-bg" waveform-color="waveform-line"/>
+			<!-- Spectrum Analyzer -->
+			<view class="SpectrumView" origin="410, 5" size="180, 90"
+				  background-color="spectrum-bg"/>
 			<!-- File info / Drop Zone -->
-			<view class="CViewContainer" origin="490, 5" size="95, 90" background-color="drop-zone">
-				<view class="CTextLabel" origin="0, 30" size="95, 30"
+			<view class="CViewContainer" origin="595, 5" size="90, 90" background-color="drop-zone">
+				<view class="CTextLabel" origin="0, 30" size="90, 30"
 					  text="Drop SPC" font="value-font"
 					  text-alignment="center" font-color="dim-text-color"/>
 			</view>
 		</view>
 
 		<!-- Channel Mixer -->
-		<view class="CViewContainer" origin="10, 160" size="780, 330" background-color="panel-color">
+		<view class="CViewContainer" origin="10, 160" size="880, 200" background-color="panel-color">
 			<view class="CTextLabel" origin="5, 5" size="200, 20"
 				  text="Channel Mixer" font="label-font"
 				  text-alignment="left" font-color="text-color"/>
 
-			<!-- Channel Strip Template - 8 channels -->
+			<!-- Channel Strip Template - 8 channels (compact layout) -->
 			<!-- Channel 1 -->
-			<view class="CViewContainer" origin="10, 30" size="90, 290" transparent="true">
-				<view class="CTextLabel" origin="0, 0" size="90, 20"
+			<view class="CViewContainer" origin="10, 28" size="100, 165" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="100, 18"
 					  text="CH 1" font="label-font"
 					  text-alignment="center" font-color="text-color"/>
-				<view class="CSlider" origin="25, 30" size="40, 180"
+				<view class="CSlider" origin="30, 20" size="40, 100"
 					  control-tag="Vol0" default-value="1"
 					  orientation="vertical"/>
-				<view class="COnOffButton" origin="20, 220" size="50, 25"
+				<view class="COnOffButton" origin="25, 125" size="50, 18"
 					  control-tag="Voice0" default-value="1"/>
-				<view class="COnOffButton" origin="20, 250" size="50, 25"
+				<view class="COnOffButton" origin="25, 145" size="50, 18"
 					  control-tag="Solo0" default-value="0"/>
 			</view>
 
 			<!-- Channel 2 -->
-			<view class="CViewContainer" origin="105, 30" size="90, 290" transparent="true">
-				<view class="CTextLabel" origin="0, 0" size="90, 20"
+			<view class="CViewContainer" origin="115, 28" size="100, 165" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="100, 18"
 					  text="CH 2" font="label-font"
 					  text-alignment="center" font-color="text-color"/>
-				<view class="CSlider" origin="25, 30" size="40, 180"
+				<view class="CSlider" origin="30, 20" size="40, 100"
 					  control-tag="Vol1" default-value="1"
 					  orientation="vertical"/>
-				<view class="COnOffButton" origin="20, 220" size="50, 25"
+				<view class="COnOffButton" origin="25, 125" size="50, 18"
 					  control-tag="Voice1" default-value="1"/>
-				<view class="COnOffButton" origin="20, 250" size="50, 25"
+				<view class="COnOffButton" origin="25, 145" size="50, 18"
 					  control-tag="Solo1" default-value="0"/>
 			</view>
 
 			<!-- Channel 3 -->
-			<view class="CViewContainer" origin="200, 30" size="90, 290" transparent="true">
-				<view class="CTextLabel" origin="0, 0" size="90, 20"
+			<view class="CViewContainer" origin="220, 28" size="100, 165" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="100, 18"
 					  text="CH 3" font="label-font"
 					  text-alignment="center" font-color="text-color"/>
-				<view class="CSlider" origin="25, 30" size="40, 180"
+				<view class="CSlider" origin="30, 20" size="40, 100"
 					  control-tag="Vol2" default-value="1"
 					  orientation="vertical"/>
-				<view class="COnOffButton" origin="20, 220" size="50, 25"
+				<view class="COnOffButton" origin="25, 125" size="50, 18"
 					  control-tag="Voice2" default-value="1"/>
-				<view class="COnOffButton" origin="20, 250" size="50, 25"
+				<view class="COnOffButton" origin="25, 145" size="50, 18"
 					  control-tag="Solo2" default-value="0"/>
 			</view>
 
 			<!-- Channel 4 -->
-			<view class="CViewContainer" origin="295, 30" size="90, 290" transparent="true">
-				<view class="CTextLabel" origin="0, 0" size="90, 20"
+			<view class="CViewContainer" origin="325, 28" size="100, 165" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="100, 18"
 					  text="CH 4" font="label-font"
 					  text-alignment="center" font-color="text-color"/>
-				<view class="CSlider" origin="25, 30" size="40, 180"
+				<view class="CSlider" origin="30, 20" size="40, 100"
 					  control-tag="Vol3" default-value="1"
 					  orientation="vertical"/>
-				<view class="COnOffButton" origin="20, 220" size="50, 25"
+				<view class="COnOffButton" origin="25, 125" size="50, 18"
 					  control-tag="Voice3" default-value="1"/>
-				<view class="COnOffButton" origin="20, 250" size="50, 25"
+				<view class="COnOffButton" origin="25, 145" size="50, 18"
 					  control-tag="Solo3" default-value="0"/>
 			</view>
 
 			<!-- Channel 5 -->
-			<view class="CViewContainer" origin="390, 30" size="90, 290" transparent="true">
-				<view class="CTextLabel" origin="0, 0" size="90, 20"
+			<view class="CViewContainer" origin="430, 28" size="100, 165" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="100, 18"
 					  text="CH 5" font="label-font"
 					  text-alignment="center" font-color="text-color"/>
-				<view class="CSlider" origin="25, 30" size="40, 180"
+				<view class="CSlider" origin="30, 20" size="40, 100"
 					  control-tag="Vol4" default-value="1"
 					  orientation="vertical"/>
-				<view class="COnOffButton" origin="20, 220" size="50, 25"
+				<view class="COnOffButton" origin="25, 125" size="50, 18"
 					  control-tag="Voice4" default-value="1"/>
-				<view class="COnOffButton" origin="20, 250" size="50, 25"
+				<view class="COnOffButton" origin="25, 145" size="50, 18"
 					  control-tag="Solo4" default-value="0"/>
 			</view>
 
 			<!-- Channel 6 -->
-			<view class="CViewContainer" origin="485, 30" size="90, 290" transparent="true">
-				<view class="CTextLabel" origin="0, 0" size="90, 20"
+			<view class="CViewContainer" origin="535, 28" size="100, 165" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="100, 18"
 					  text="CH 6" font="label-font"
 					  text-alignment="center" font-color="text-color"/>
-				<view class="CSlider" origin="25, 30" size="40, 180"
+				<view class="CSlider" origin="30, 20" size="40, 100"
 					  control-tag="Vol5" default-value="1"
 					  orientation="vertical"/>
-				<view class="COnOffButton" origin="20, 220" size="50, 25"
+				<view class="COnOffButton" origin="25, 125" size="50, 18"
 					  control-tag="Voice5" default-value="1"/>
-				<view class="COnOffButton" origin="20, 250" size="50, 25"
+				<view class="COnOffButton" origin="25, 145" size="50, 18"
 					  control-tag="Solo5" default-value="0"/>
 			</view>
 
 			<!-- Channel 7 -->
-			<view class="CViewContainer" origin="580, 30" size="90, 290" transparent="true">
-				<view class="CTextLabel" origin="0, 0" size="90, 20"
+			<view class="CViewContainer" origin="640, 28" size="100, 165" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="100, 18"
 					  text="CH 7" font="label-font"
 					  text-alignment="center" font-color="text-color"/>
-				<view class="CSlider" origin="25, 30" size="40, 180"
+				<view class="CSlider" origin="30, 20" size="40, 100"
 					  control-tag="Vol6" default-value="1"
 					  orientation="vertical"/>
-				<view class="COnOffButton" origin="20, 220" size="50, 25"
+				<view class="COnOffButton" origin="25, 125" size="50, 18"
 					  control-tag="Voice6" default-value="1"/>
-				<view class="COnOffButton" origin="20, 250" size="50, 25"
+				<view class="COnOffButton" origin="25, 145" size="50, 18"
 					  control-tag="Solo6" default-value="0"/>
 			</view>
 
 			<!-- Channel 8 -->
-			<view class="CViewContainer" origin="675, 30" size="90, 290" transparent="true">
-				<view class="CTextLabel" origin="0, 0" size="90, 20"
+			<view class="CViewContainer" origin="745, 28" size="100, 165" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="100, 18"
 					  text="CH 8" font="label-font"
 					  text-alignment="center" font-color="text-color"/>
-				<view class="CSlider" origin="25, 30" size="40, 180"
+				<view class="CSlider" origin="30, 20" size="40, 100"
 					  control-tag="Vol7" default-value="1"
 					  orientation="vertical"/>
-				<view class="COnOffButton" origin="20, 220" size="50, 25"
+				<view class="COnOffButton" origin="25, 125" size="50, 18"
 					  control-tag="Voice7" default-value="1"/>
-				<view class="COnOffButton" origin="20, 250" size="50, 25"
+				<view class="COnOffButton" origin="25, 145" size="50, 18"
 					  control-tag="Solo7" default-value="0"/>
+			</view>
+		</view>
+
+		<!-- Sample Editor Panel -->
+		<view class="CViewContainer" origin="10, 370" size="880, 220" background-color="panel-color">
+			<view class="CTextLabel" origin="5, 5" size="200, 20"
+				  text="Sample Editor" font="label-font"
+				  text-alignment="left" font-color="text-color"/>
+
+			<!-- Sample Selector -->
+			<view class="CViewContainer" origin="10, 30" size="200, 180" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="200, 16"
+					  text="Sample" font="small-font"
+					  text-alignment="left" font-color="dim-text-color"/>
+				<!-- Sample list would go here - using placeholder -->
+				<view class="COptionMenu" origin="0, 20" size="190, 24"
+					  control-tag="SampleSelect" default-value="0"
+					  font="value-font" text-color="text-color"
+					  background-color="slider-track"/>
+				<!-- Sample Waveform Preview -->
+				<view class="WaveformView" origin="0, 50" size="190, 80"
+					  background-color="sample-editor-bg"/>
+				<!-- Trigger Button -->
+				<view class="CTextButton" origin="0, 140" size="90, 30"
+					  control-tag="SampleTrigger" default-value="0"
+					  title="Trigger" font="label-font"
+					  text-color="text-color"/>
+			</view>
+
+			<!-- ADSR Envelope -->
+			<view class="CViewContainer" origin="220, 30" size="350, 180" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="350, 16"
+					  text="ADSR Envelope" font="small-font"
+					  text-alignment="left" font-color="dim-text-color"/>
+
+				<!-- Attack -->
+				<view class="CViewContainer" origin="0, 20" size="80, 150" transparent="true">
+					<view class="CTextLabel" origin="0, 0" size="80, 14"
+						  text="Attack" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+					<view class="CSlider" origin="20, 18" size="40, 100"
+						  control-tag="SampleAttack" default-value="0.5"
+						  orientation="vertical"/>
+					<view class="CTextLabel" origin="0, 120" size="80, 14"
+						  text="0" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+				</view>
+
+				<!-- Decay -->
+				<view class="CViewContainer" origin="85, 20" size="80, 150" transparent="true">
+					<view class="CTextLabel" origin="0, 0" size="80, 14"
+						  text="Decay" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+					<view class="CSlider" origin="20, 18" size="40, 100"
+						  control-tag="SampleDecay" default-value="0.5"
+						  orientation="vertical"/>
+					<view class="CTextLabel" origin="0, 120" size="80, 14"
+						  text="0" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+				</view>
+
+				<!-- Sustain -->
+				<view class="CViewContainer" origin="170, 20" size="80, 150" transparent="true">
+					<view class="CTextLabel" origin="0, 0" size="80, 14"
+						  text="Sustain" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+					<view class="CSlider" origin="20, 18" size="40, 100"
+						  control-tag="SampleSustain" default-value="0.7"
+						  orientation="vertical"/>
+					<view class="CTextLabel" origin="0, 120" size="80, 14"
+						  text="7" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+				</view>
+
+				<!-- Release -->
+				<view class="CViewContainer" origin="255, 20" size="80, 150" transparent="true">
+					<view class="CTextLabel" origin="0, 0" size="80, 14"
+						  text="Release" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+					<view class="CSlider" origin="20, 18" size="40, 100"
+						  control-tag="SampleRelease" default-value="0.5"
+						  orientation="vertical"/>
+					<view class="CTextLabel" origin="0, 120" size="80, 14"
+						  text="0" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+				</view>
+			</view>
+
+			<!-- Pitch and Volume -->
+			<view class="CViewContainer" origin="580, 30" size="290, 180" transparent="true">
+				<view class="CTextLabel" origin="0, 0" size="290, 16"
+					  text="Sample Parameters" font="small-font"
+					  text-alignment="left" font-color="dim-text-color"/>
+
+				<!-- Pitch -->
+				<view class="CViewContainer" origin="0, 20" size="140, 80" transparent="true">
+					<view class="CTextLabel" origin="0, 0" size="140, 14"
+						  text="Pitch (semitones)" font="small-font"
+						  text-alignment="left" font-color="dim-text-color"/>
+					<view class="CSlider" origin="0, 18" size="130, 24"
+						  control-tag="SamplePitch" default-value="0.5"
+						  orientation="horizontal"/>
+					<view class="CTextLabel" origin="0, 45" size="140, 14"
+						  text="0" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+				</view>
+
+				<!-- Volume -->
+				<view class="CViewContainer" origin="0, 100" size="140, 80" transparent="true">
+					<view class="CTextLabel" origin="0, 0" size="140, 14"
+						  text="Volume" font="small-font"
+						  text-alignment="left" font-color="dim-text-color"/>
+					<view class="CSlider" origin="0, 18" size="130, 24"
+						  control-tag="SampleVolume" default-value="1"
+						  orientation="horizontal"/>
+					<view class="CTextLabel" origin="0, 45" size="140, 14"
+						  text="100%" font="small-font"
+						  text-alignment="center" font-color="dim-text-color"/>
+				</view>
+
+				<!-- Sample Info -->
+				<view class="CViewContainer" origin="150, 20" size="130, 160" transparent="true">
+					<view class="CTextLabel" origin="0, 0" size="130, 14"
+						  text="Sample Info" font="small-font"
+						  text-alignment="left" font-color="dim-text-color"/>
+					<view class="CTextLabel" origin="0, 20" size="130, 14"
+						  text="Length: 0" font="small-font"
+						  text-alignment="left" font-color="dim-text-color"/>
+					<view class="CTextLabel" origin="0, 36" size="130, 14"
+						  text="Loop: Off" font="small-font"
+						  text-alignment="left" font-color="dim-text-color"/>
+					<view class="CTextLabel" origin="0, 52" size="130, 14"
+						  text="Rate: 32000 Hz" font="small-font"
+						  text-alignment="left" font-color="dim-text-color"/>
+				</view>
 			</view>
 		</view>
 	</template>
