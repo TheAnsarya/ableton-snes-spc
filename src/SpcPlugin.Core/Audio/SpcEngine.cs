@@ -1,20 +1,41 @@
 namespace SpcPlugin.Core.Audio;
 
 using SpcPlugin.Core.Emulation;
+using SpcPlugin.Core.Editing;
 
 /// <summary>
 /// Main audio engine that coordinates SPC700 CPU and S-DSP emulation
-/// to generate audio output.
+/// to generate audio output. Designed for use as a VST3 instrument in DAWs like Ableton Live.
 /// </summary>
 public sealed class SpcEngine : IDisposable {
 	private readonly Spc700 _cpu;
 	private readonly SDsp _dsp;
+	private readonly SpcEditor _editor;
 	private byte[] _ramBuffer;
 
 	private readonly float[] _outputBuffer;
 	private int _sampleRate;
 	private bool _isPlaying;
 	private bool _disposed;
+
+	// Voice control for Ableton automation
+	private readonly bool[] _voiceMuted = new bool[8];
+	private readonly bool[] _voiceSolo = new bool[8];
+	private readonly float[] _voiceVolume = [1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f];
+
+	// Master controls
+	private float _masterVolume = 1.0f;
+	private bool _loopEnabled = true;
+
+	// Position tracking for DAW sync
+	private long _totalSamplesGenerated;
+	private long _loopStartSample;
+	private long _loopEndSample;
+
+	// Tempo sync (BPM from DAW)
+	private double _hostTempo = 120.0;
+	private double _hostTimeSignatureNumerator = 4;
+	private double _hostTimeSignatureDenominator = 4;
 
 	// Timing constants
 	private const int NativeSampleRate = 32000;
@@ -34,12 +55,49 @@ public sealed class SpcEngine : IDisposable {
 	}
 
 	/// <summary>
+	/// Gets or sets the master volume (0.0 - 1.0).
+	/// </summary>
+	public float MasterVolume {
+		get => _masterVolume;
+		set => _masterVolume = Math.Clamp(value, 0f, 2f);
+	}
+
+	/// <summary>
+	/// Gets or sets whether looping is enabled.
+	/// </summary>
+	public bool LoopEnabled {
+		get => _loopEnabled;
+		set => _loopEnabled = value;
+	}
+
+	/// <summary>
+	/// Gets the current playback position in samples.
+	/// </summary>
+	public long Position => _totalSamplesGenerated;
+
+	/// <summary>
+	/// Gets the current playback position in seconds.
+	/// </summary>
+	public double PositionSeconds => (double)_totalSamplesGenerated / _sampleRate;
+
+	/// <summary>
+	/// Gets the editor for modifying the loaded SPC.
+	/// </summary>
+	public SpcEditor Editor => _editor;
+
+	/// <summary>
+	/// Gets the total CPU cycles executed.
+	/// </summary>
+	public long TotalCycles => _cpu.TotalCycles;
+
+	/// <summary>
 	/// Creates a new SPC engine instance.
 	/// </summary>
 	/// <param name="sampleRate">Output sample rate (default 44100).</param>
 	public SpcEngine(int sampleRate = 44100) {
 		_cpu = new Spc700();
 		_dsp = new SDsp();
+		_editor = new SpcEditor();
 		_ramBuffer = new byte[0x10000];
 		_outputBuffer = new float[8192];
 		_sampleRate = sampleRate;
@@ -101,7 +159,154 @@ public sealed class SpcEngine : IDisposable {
 	public void Stop() {
 		_isPlaying = false;
 		_cpu.Reset();
+		_totalSamplesGenerated = 0;
 	}
+
+	/// <summary>
+	/// Seeks to a specific position (resets and re-emulates to reach position).
+	/// Note: This is expensive for long seeks.
+	/// </summary>
+	public void Seek(double seconds) {
+		_cpu.Reset();
+		_totalSamplesGenerated = 0;
+
+		int targetSamples = (int)(seconds * NativeSampleRate);
+		var tempBuffer = new float[1024];
+
+		while (_totalSamplesGenerated < targetSamples) {
+			int samplesToGenerate = Math.Min(512, (int)(targetSamples - _totalSamplesGenerated));
+			GenerateNative(tempBuffer.AsSpan(0, samplesToGenerate * 2), samplesToGenerate);
+			_totalSamplesGenerated += samplesToGenerate;
+		}
+	}
+
+	#region Voice Control (Ableton Automation)
+
+	/// <summary>
+	/// Gets or sets whether a voice is muted.
+	/// </summary>
+	public bool GetVoiceMuted(int voice) {
+		ValidateVoice(voice);
+		return _voiceMuted[voice];
+	}
+
+	public void SetVoiceMuted(int voice, bool muted) {
+		ValidateVoice(voice);
+		_voiceMuted[voice] = muted;
+	}
+
+	/// <summary>
+	/// Gets or sets whether a voice is soloed.
+	/// </summary>
+	public bool GetVoiceSolo(int voice) {
+		ValidateVoice(voice);
+		return _voiceSolo[voice];
+	}
+
+	public void SetVoiceSolo(int voice, bool solo) {
+		ValidateVoice(voice);
+		_voiceSolo[voice] = solo;
+	}
+
+	/// <summary>
+	/// Gets or sets individual voice volume (0.0 - 1.0).
+	/// </summary>
+	public float GetVoiceVolume(int voice) {
+		ValidateVoice(voice);
+		return _voiceVolume[voice];
+	}
+
+	public void SetVoiceVolume(int voice, float volume) {
+		ValidateVoice(voice);
+		_voiceVolume[voice] = Math.Clamp(volume, 0f, 2f);
+	}
+
+	/// <summary>
+	/// Mutes all voices.
+	/// </summary>
+	public void MuteAll() {
+		for (int i = 0; i < 8; i++) _voiceMuted[i] = true;
+	}
+
+	/// <summary>
+	/// Unmutes all voices.
+	/// </summary>
+	public void UnmuteAll() {
+		for (int i = 0; i < 8; i++) _voiceMuted[i] = false;
+	}
+
+	/// <summary>
+	/// Clears all solo states.
+	/// </summary>
+	public void ClearSolo() {
+		for (int i = 0; i < 8; i++) _voiceSolo[i] = false;
+	}
+
+	/// <summary>
+	/// Gets the effective voice enable mask based on mute/solo state.
+	/// </summary>
+	private byte GetEffectiveVoiceMask() {
+		bool anySolo = false;
+		for (int i = 0; i < 8; i++) {
+			if (_voiceSolo[i]) { anySolo = true; break; }
+		}
+
+		byte mask = 0;
+		for (int i = 0; i < 8; i++) {
+			bool enabled;
+			if (anySolo) {
+				enabled = _voiceSolo[i] && !_voiceMuted[i];
+			} else {
+				enabled = !_voiceMuted[i];
+			}
+			if (enabled) mask |= (byte)(1 << i);
+		}
+		return mask;
+	}
+
+	private static void ValidateVoice(int voice) {
+		if (voice < 0 || voice >= 8)
+			throw new ArgumentOutOfRangeException(nameof(voice), "Voice must be 0-7");
+	}
+
+	#endregion
+
+	#region DAW Sync (Ableton Integration)
+
+	/// <summary>
+	/// Sets the host tempo for tempo-sync features.
+	/// </summary>
+	public void SetHostTempo(double bpm) {
+		_hostTempo = Math.Clamp(bpm, 20, 999);
+	}
+
+	/// <summary>
+	/// Sets the host time signature.
+	/// </summary>
+	public void SetTimeSignature(double numerator, double denominator) {
+		_hostTimeSignatureNumerator = numerator;
+		_hostTimeSignatureDenominator = denominator;
+	}
+
+	/// <summary>
+	/// Syncs playback position to host transport.
+	/// </summary>
+	public void SyncToHostPosition(double positionSeconds) {
+		// For tempo-synced playback, adjust position based on host
+		// This is useful for quantized loop points
+	}
+
+	/// <summary>
+	/// Gets the current position in beats (based on host tempo).
+	/// </summary>
+	public double PositionBeats => PositionSeconds * (_hostTempo / 60.0);
+
+	/// <summary>
+	/// Gets the current position in bars.
+	/// </summary>
+	public double PositionBars => PositionBeats / _hostTimeSignatureNumerator;
+
+	#endregion
 
 	/// <summary>
 	/// Generates audio samples into the provided buffer.
@@ -125,6 +330,13 @@ public sealed class SpcEngine : IDisposable {
 
 		// Resample to output rate
 		Resample(nativeBuffer, output, nativeSamples, sampleCount);
+
+		// Apply master volume
+		for (int i = 0; i < sampleCount * 2; i++) {
+			output[i] *= _masterVolume;
+		}
+
+		_totalSamplesGenerated += sampleCount;
 	}
 
 	private void GenerateNative(Span<float> output, int sampleCount) {

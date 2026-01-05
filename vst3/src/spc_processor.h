@@ -2,6 +2,9 @@
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include "spc_params.h"
+#include "dotnet_host.h"
+#include <memory>
+#include <vector>
 
 namespace SnesSpc {
 
@@ -27,8 +30,13 @@ public:
 
 	// Load SPC file
 	bool loadSpcFile(const char* filePath);
+	bool loadSpcData(const uint8_t* data, int length);
 
 private:
+	// .NET host for calling into SpcPlugin.Core
+	std::unique_ptr<DotNetHost> dotnetHost_;
+	intptr_t engineHandle_ = 0;
+
 	// Parameters
 	float masterVolume_ = 1.0f;
 	bool playing_ = false;
@@ -36,11 +44,14 @@ private:
 	bool voiceEnabled_[8] = { true, true, true, true, true, true, true, true };
 	bool voiceSolo_[8] = { false, false, false, false, false, false, false, false };
 
-	// .NET runtime host handle
-	void* dotnetHost_ = nullptr;
-
 	// Sample rate
 	float sampleRate_ = 44100.0f;
+
+	// Interleaved audio buffer for .NET output
+	std::vector<float> interleavedBuffer_;
+
+	// Helper to sync parameters to engine
+	void syncParametersToEngine();
 };
 
 } // namespace SnesSpc
