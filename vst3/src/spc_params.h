@@ -31,6 +31,16 @@ enum ParamID : Steinberg::Vst::ParamID {
 	kParamSolo6 = 206,
 	kParamSolo7 = 207,
 
+	// Voice volume (0-7)
+	kParamVoiceVol0 = 300,
+	kParamVoiceVol1 = 301,
+	kParamVoiceVol2 = 302,
+	kParamVoiceVol3 = 303,
+	kParamVoiceVol4 = 304,
+	kParamVoiceVol5 = 305,
+	kParamVoiceVol6 = 306,
+	kParamVoiceVol7 = 307,
+
 	kNumParams
 };
 

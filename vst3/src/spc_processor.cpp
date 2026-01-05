@@ -143,10 +143,25 @@ Steinberg::tresult PLUGIN_API SpcProcessor::process(Steinberg::Vst::ProcessData&
 							}
 							break;
 						}
+						// Handle voice volume
+						case kParamVoiceVol0: case kParamVoiceVol1: case kParamVoiceVol2: case kParamVoiceVol3:
+						case kParamVoiceVol4: case kParamVoiceVol5: case kParamVoiceVol6: case kParamVoiceVol7: {
+							int voice = paramId - kParamVoiceVol0;
+							voiceVolume_[voice] = static_cast<float>(value);
+							if (dotnetHost_ && engineHandle_) {
+								dotnetHost_->setVoiceVolume(engineHandle_, voice, voiceVolume_[voice]);
+							}
+							break;
+						}
 					}
 				}
 			}
 		}
+	}
+
+	// Process MIDI events
+	if (data.inputEvents) {
+		processMidiEvents(data.inputEvents);
 	}
 
 	// Sync host transport info (tempo, time signature)
@@ -243,7 +258,27 @@ Steinberg::tresult PLUGIN_API SpcProcessor::setState(Steinberg::IBStream* state)
 		voiceSolo_[i] = solo != 0;
 	}
 
-	// TODO: Read embedded SPC data
+	// Version 2+: Voice volumes and embedded SPC data
+	if (version >= 2) {
+		// Read voice volumes
+		for (int i = 0; i < 8; i++) {
+			state->read(&voiceVolume_[i], sizeof(float));
+		}
+
+		// Read embedded SPC data length
+		Steinberg::int32 spcDataLength = 0;
+		state->read(&spcDataLength, sizeof(spcDataLength));
+
+		if (spcDataLength > 0 && spcDataLength < 0x20000) { // Max 128KB
+			embeddedSpcData_.resize(spcDataLength);
+			state->read(embeddedSpcData_.data(), spcDataLength);
+
+			// Load into engine if available
+			if (dotnetHost_ && engineHandle_) {
+				dotnetHost_->loadSpcData(engineHandle_, embeddedSpcData_.data(), spcDataLength);
+			}
+		}
+	}
 
 	// Sync to engine
 	syncParametersToEngine();
@@ -256,8 +291,8 @@ Steinberg::tresult PLUGIN_API SpcProcessor::getState(Steinberg::IBStream* state)
 		return Steinberg::kResultFalse;
 	}
 
-	// Write state version
-	Steinberg::int32 version = 1;
+	// Write state version (2 = with voice volumes and SPC data)
+	Steinberg::int32 version = 2;
 	state->write(&version, sizeof(version));
 
 	// Write master volume
@@ -280,7 +315,17 @@ Steinberg::tresult PLUGIN_API SpcProcessor::getState(Steinberg::IBStream* state)
 		state->write(&solo, sizeof(solo));
 	}
 
-	// TODO: Write embedded SPC data
+	// Version 2: Voice volumes
+	for (int i = 0; i < 8; i++) {
+		state->write(&voiceVolume_[i], sizeof(float));
+	}
+
+	// Version 2: Embedded SPC data
+	Steinberg::int32 spcDataLength = static_cast<Steinberg::int32>(embeddedSpcData_.size());
+	state->write(&spcDataLength, sizeof(spcDataLength));
+	if (spcDataLength > 0) {
+		state->write(embeddedSpcData_.data(), spcDataLength);
+	}
 
 	return Steinberg::kResultOk;
 }
@@ -296,7 +341,12 @@ bool SpcProcessor::loadSpcData(const uint8_t* data, int length) {
 	if (!dotnetHost_ || !engineHandle_) {
 		return false;
 	}
-	return dotnetHost_->loadSpcData(engineHandle_, data, length);
+	bool result = dotnetHost_->loadSpcData(engineHandle_, data, length);
+	if (result) {
+		// Store for state save
+		embeddedSpcData_.assign(data, data + length);
+	}
+	return result;
 }
 
 void SpcProcessor::syncParametersToEngine() {
@@ -316,6 +366,53 @@ void SpcProcessor::syncParametersToEngine() {
 	for (int i = 0; i < 8; i++) {
 		dotnetHost_->setVoiceMuted(engineHandle_, i, !voiceEnabled_[i]);
 		dotnetHost_->setVoiceSolo(engineHandle_, i, voiceSolo_[i]);
+		dotnetHost_->setVoiceVolume(engineHandle_, i, voiceVolume_[i]);
+	}
+}
+
+void SpcProcessor::processMidiEvents(Steinberg::Vst::IEventList* events) {
+	if (!events || !dotnetHost_ || !engineHandle_) {
+		return;
+	}
+
+	Steinberg::int32 eventCount = events->getEventCount();
+	for (Steinberg::int32 i = 0; i < eventCount; i++) {
+		Steinberg::Vst::Event event;
+		if (events->getEvent(i, event) == Steinberg::kResultOk) {
+			switch (event.type) {
+				case Steinberg::Vst::Event::kNoteOnEvent:
+					dotnetHost_->midiNoteOn(
+						engineHandle_,
+						event.noteOn.channel,
+						event.noteOn.pitch,
+						static_cast<int>(event.noteOn.velocity * 127)
+					);
+					break;
+
+				case Steinberg::Vst::Event::kNoteOffEvent:
+					dotnetHost_->midiNoteOff(
+						engineHandle_,
+						event.noteOff.channel,
+						event.noteOff.pitch,
+						static_cast<int>(event.noteOff.velocity * 127)
+					);
+					break;
+
+				case Steinberg::Vst::Event::kLegacyMIDICCOutEvent:
+					// Handle CC messages
+					dotnetHost_->midiControlChange(
+						engineHandle_,
+						event.midiCCOut.channel,
+						event.midiCCOut.controlNumber,
+						event.midiCCOut.value
+					);
+					break;
+
+				default:
+					// Ignore other event types for now
+					break;
+			}
+		}
 	}
 }
 

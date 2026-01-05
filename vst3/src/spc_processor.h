@@ -1,6 +1,7 @@
 #pragma once
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
+#include "pluginterfaces/vst/ivstevents.h"
 #include "spc_params.h"
 #include "dotnet_host.h"
 #include <memory>
@@ -39,6 +40,7 @@ private:
 
 	// Parameters
 	float masterVolume_ = 1.0f;
+	float voiceVolume_[8] = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
 	bool playing_ = false;
 	bool looping_ = true;
 	bool voiceEnabled_[8] = { true, true, true, true, true, true, true, true };
@@ -50,8 +52,14 @@ private:
 	// Interleaved audio buffer for .NET output
 	std::vector<float> interleavedBuffer_;
 
+	// Embedded SPC data (for state save/restore)
+	std::vector<uint8_t> embeddedSpcData_;
+
 	// Helper to sync parameters to engine
 	void syncParametersToEngine();
+
+	// Process MIDI events
+	void processMidiEvents(Steinberg::Vst::IEventList* events);
 };
 
 } // namespace SnesSpc

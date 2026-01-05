@@ -70,6 +70,12 @@ bool DotNetHost::initialize(const char* libraryPath) {
 	getTotalCyclesFunc_ = loadFunction<GetTotalCyclesFunc>("spc_get_total_cycles");
 	getSampleRateFunc_ = loadFunction<GetSampleRateFunc>("spc_get_sample_rate");
 	setSampleRateFunc_ = loadFunction<SetSampleRateFunc>("spc_set_sample_rate");
+	midiNoteOnFunc_ = loadFunction<MidiNoteOnFunc>("spc_midi_note_on");
+	midiNoteOffFunc_ = loadFunction<MidiNoteOffFunc>("spc_midi_note_off");
+	midiControlChangeFunc_ = loadFunction<MidiControlChangeFunc>("spc_midi_cc");
+	midiPitchBendFunc_ = loadFunction<MidiPitchBendFunc>("spc_midi_pitch_bend");
+	midiSetPitchBendRangeFunc_ = loadFunction<MidiSetPitchBendRangeFunc>("spc_midi_set_pitch_bend_range");
+	midiResetFunc_ = loadFunction<MidiResetFunc>("spc_midi_reset");
 
 	// At minimum we need create, destroy, and process
 	if (!createEngineFunc_ || !destroyEngineFunc_ || !processFunc_) {
@@ -118,6 +124,12 @@ void DotNetHost::shutdown() {
 	getTotalCyclesFunc_ = nullptr;
 	getSampleRateFunc_ = nullptr;
 	setSampleRateFunc_ = nullptr;
+	midiNoteOnFunc_ = nullptr;
+	midiNoteOffFunc_ = nullptr;
+	midiControlChangeFunc_ = nullptr;
+	midiPitchBendFunc_ = nullptr;
+	midiSetPitchBendRangeFunc_ = nullptr;
+	midiResetFunc_ = nullptr;
 }
 
 // === Engine Lifecycle ===
@@ -334,6 +346,44 @@ int DotNetHost::getSampleRate(intptr_t engine) {
 void DotNetHost::setSampleRate(intptr_t engine, int sampleRate) {
 	if (setSampleRateFunc_ && engine) {
 		setSampleRateFunc_(engine, sampleRate);
+	}
+}
+
+// === MIDI ===
+
+void DotNetHost::midiNoteOn(intptr_t engine, int channel, int note, int velocity) {
+	if (midiNoteOnFunc_ && engine) {
+		midiNoteOnFunc_(engine, channel, note, velocity);
+	}
+}
+
+void DotNetHost::midiNoteOff(intptr_t engine, int channel, int note, int velocity) {
+	if (midiNoteOffFunc_ && engine) {
+		midiNoteOffFunc_(engine, channel, note, velocity);
+	}
+}
+
+void DotNetHost::midiControlChange(intptr_t engine, int channel, int controller, int value) {
+	if (midiControlChangeFunc_ && engine) {
+		midiControlChangeFunc_(engine, channel, controller, value);
+	}
+}
+
+void DotNetHost::midiPitchBend(intptr_t engine, int channel, int value) {
+	if (midiPitchBendFunc_ && engine) {
+		midiPitchBendFunc_(engine, channel, value);
+	}
+}
+
+void DotNetHost::midiSetPitchBendRange(intptr_t engine, int semitones) {
+	if (midiSetPitchBendRangeFunc_ && engine) {
+		midiSetPitchBendRangeFunc_(engine, semitones);
+	}
+}
+
+void DotNetHost::midiReset(intptr_t engine) {
+	if (midiResetFunc_ && engine) {
+		midiResetFunc_(engine);
 	}
 }
 

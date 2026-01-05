@@ -87,6 +87,23 @@ Steinberg::tresult PLUGIN_API SpcController::initialize(Steinberg::FUnknown* con
 		);
 	}
 
+	// Voice volume parameters
+	const char16_t* volumeNames[] = {
+		STR16("Volume 1"), STR16("Volume 2"), STR16("Volume 3"), STR16("Volume 4"),
+		STR16("Volume 5"), STR16("Volume 6"), STR16("Volume 7"), STR16("Volume 8")
+	};
+
+	for (int i = 0; i < 8; i++) {
+		parameters.addParameter(
+			volumeNames[i],
+			STR16("%"),
+			0,
+			1.0,
+			Steinberg::Vst::ParameterInfo::kCanAutomate,
+			kParamVoiceVol0 + i
+		);
+	}
+
 	return Steinberg::kResultOk;
 }
 

@@ -71,6 +71,14 @@ public:
 	int getSampleRate(intptr_t engine);
 	void setSampleRate(intptr_t engine, int sampleRate);
 
+	// === MIDI ===
+	void midiNoteOn(intptr_t engine, int channel, int note, int velocity);
+	void midiNoteOff(intptr_t engine, int channel, int note, int velocity);
+	void midiControlChange(intptr_t engine, int channel, int controller, int value);
+	void midiPitchBend(intptr_t engine, int channel, int value);
+	void midiSetPitchBendRange(intptr_t engine, int semitones);
+	void midiReset(intptr_t engine);
+
 private:
 	void* libraryHandle_ = nullptr;
 
@@ -106,6 +114,12 @@ private:
 	using GetTotalCyclesFunc = int64_t (*)(intptr_t);
 	using GetSampleRateFunc = int (*)(intptr_t);
 	using SetSampleRateFunc = void (*)(intptr_t, int);
+	using MidiNoteOnFunc = void (*)(intptr_t, int, int, int);
+	using MidiNoteOffFunc = void (*)(intptr_t, int, int, int);
+	using MidiControlChangeFunc = void (*)(intptr_t, int, int, int);
+	using MidiPitchBendFunc = void (*)(intptr_t, int, int);
+	using MidiSetPitchBendRangeFunc = void (*)(intptr_t, int);
+	using MidiResetFunc = void (*)(intptr_t);
 
 	CreateEngineFunc createEngineFunc_ = nullptr;
 	DestroyEngineFunc destroyEngineFunc_ = nullptr;
@@ -138,6 +152,12 @@ private:
 	GetTotalCyclesFunc getTotalCyclesFunc_ = nullptr;
 	GetSampleRateFunc getSampleRateFunc_ = nullptr;
 	SetSampleRateFunc setSampleRateFunc_ = nullptr;
+	MidiNoteOnFunc midiNoteOnFunc_ = nullptr;
+	MidiNoteOffFunc midiNoteOffFunc_ = nullptr;
+	MidiControlChangeFunc midiControlChangeFunc_ = nullptr;
+	MidiPitchBendFunc midiPitchBendFunc_ = nullptr;
+	MidiSetPitchBendRangeFunc midiSetPitchBendRangeFunc_ = nullptr;
+	MidiResetFunc midiResetFunc_ = nullptr;
 
 	// Helper to load function pointer
 	template<typename T>
