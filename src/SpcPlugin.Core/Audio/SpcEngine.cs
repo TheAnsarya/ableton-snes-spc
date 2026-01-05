@@ -9,6 +9,7 @@ using SpcPlugin.Core.Emulation;
 public sealed class SpcEngine : IDisposable {
 	private readonly Spc700 _cpu;
 	private readonly SDsp _dsp;
+	private byte[] _ramBuffer;
 
 	private readonly float[] _outputBuffer;
 	private int _sampleRate;
@@ -39,11 +40,13 @@ public sealed class SpcEngine : IDisposable {
 	public SpcEngine(int sampleRate = 44100) {
 		_cpu = new Spc700();
 		_dsp = new SDsp();
+		_ramBuffer = new byte[0x10000];
 		_outputBuffer = new float[8192];
 		_sampleRate = sampleRate;
 
-		// Connect DSP to CPU RAM
-		_dsp.Ram = _cpu.Ram.ToArray();
+		// Connect CPU and DSP
+		_cpu.Dsp = _dsp;
+		_dsp.Ram = _ramBuffer;
 	}
 
 	/// <summary>
@@ -64,8 +67,9 @@ public sealed class SpcEngine : IDisposable {
 		_cpu.LoadSpc(spcData);
 		_dsp.LoadFromSpc(spcData.Slice(0x10100, 128));
 
-		// Reconnect DSP RAM reference after loading
-		_dsp.Ram = _cpu.Ram.ToArray();
+		// Copy RAM to shared buffer so DSP can read samples
+		_cpu.Ram.CopyTo(_ramBuffer);
+		_dsp.Ram = _ramBuffer;
 	}
 
 	/// <summary>
