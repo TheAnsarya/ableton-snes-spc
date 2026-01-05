@@ -363,27 +363,132 @@ public sealed class ProjectManager : IDisposable {
 			throw new ArgumentException($"Sample {sampleIndex} not found", nameof(sampleIndex));
 		}
 
-		// Check size constraint
-		int sizeDiff = brrData.Length - sample.Size;
-		if (sizeDiff > Analyzer.Memory.FreeBytes) {
+		// Check if we have enough total space
+		int totalAvailable = Analyzer.Memory.FreeBytes + sample.Size;
+		if (brrData.Length > totalAvailable) {
 			throw new InvalidOperationException(
-				$"Sample too large. Need {brrData.Length} bytes but only {Analyzer.Memory.FreeBytes + sample.Size} available.");
+				$"Sample too large. Need {brrData.Length} bytes but only {totalAvailable} available.");
 		}
 
 		BeginModification(description);
 
-		// For simplicity, replace in-place if same size or smaller
-		// A full implementation would relocate samples if needed
+		// If same size or smaller, replace in-place
 		if (brrData.Length <= sample.Size) {
-			brrData.CopyTo(_currentProject.Ram, sample.StartAddress);
-			// Zero out remaining bytes
-			Array.Clear(_currentProject.Ram, sample.StartAddress + brrData.Length, sample.Size - brrData.Length);
+			ReplaceInPlace(sample, brrData);
 		} else {
-			throw new InvalidOperationException("Sample relocation not yet implemented. New sample must be same size or smaller.");
+			// Need to relocate - find free space and update directory
+			RelocateSample(sample, brrData);
 		}
 
 		RunAnalysis();
 		OnProjectChanged(ProjectChangeType.Modified);
+	}
+
+	/// <summary>
+	/// Replaces sample data in-place (when new sample is same size or smaller).
+	/// </summary>
+	private void ReplaceInPlace(SampleInfo sample, byte[] brrData) {
+		brrData.CopyTo(_currentProject!.Ram, sample.StartAddress);
+		// Zero out remaining bytes
+		if (brrData.Length < sample.Size) {
+			Array.Clear(_currentProject.Ram, sample.StartAddress + brrData.Length, sample.Size - brrData.Length);
+		}
+	}
+
+	/// <summary>
+	/// Relocates a sample to a new location when it needs to grow.
+	/// </summary>
+	private void RelocateSample(SampleInfo sample, byte[] brrData) {
+		// Find a contiguous free region for the new sample
+		var freeRegion = FindFreeRegion(brrData.Length);
+		if (freeRegion == null) {
+			throw new InvalidOperationException(
+				$"Cannot find contiguous free region for {brrData.Length} bytes. Consider defragmenting or reducing sample size.");
+		}
+
+		// Zero out old sample location
+		Array.Clear(_currentProject!.Ram, sample.StartAddress, sample.Size);
+
+		// Write new sample data to free region
+		brrData.CopyTo(_currentProject.Ram, freeRegion.Value);
+
+		// Update sample directory to point to new location
+		UpdateSampleDirectory(sample.Index, freeRegion.Value, brrData);
+	}
+
+	/// <summary>
+	/// Finds a contiguous free region in RAM large enough for the given size.
+	/// </summary>
+	private int? FindFreeRegion(int sizeNeeded) {
+		if (_currentProject == null || Analyzer == null) return null;
+
+		// Build a map of used regions
+		var usedRegions = new List<(int Start, int End)>();
+
+		// Add all samples
+		foreach (var s in Analyzer.Samples) {
+			usedRegions.Add((s.StartAddress, s.EndAddress));
+		}
+
+		// Add echo buffer
+		if (Analyzer.Memory.EchoBytes > 0) {
+			usedRegions.Add((Analyzer.Memory.EchoStartAddress, Analyzer.Memory.EchoEndAddress));
+		}
+
+		// Add driver code region (assume 0x0000 to first sample or 0x1000)
+		int driverEnd = Analyzer.Memory.DriverBytes > 0 ? Analyzer.Memory.DriverBytes : 0x1000;
+		usedRegions.Add((0, driverEnd));
+
+		// Sort by start address
+		usedRegions.Sort((a, b) => a.Start.CompareTo(b.Start));
+
+		// Find gaps between used regions
+		int currentEnd = 0;
+		foreach (var (start, end) in usedRegions) {
+			if (start > currentEnd) {
+				int gapSize = start - currentEnd;
+				if (gapSize >= sizeNeeded) {
+					return currentEnd;
+				}
+			}
+			currentEnd = Math.Max(currentEnd, end);
+		}
+
+		// Check space after last used region
+		if (0x10000 - currentEnd >= sizeNeeded) {
+			return currentEnd;
+		}
+
+		return null;
+	}
+
+	/// <summary>
+	/// Updates the sample directory to point to a new sample location.
+	/// </summary>
+	private void UpdateSampleDirectory(int sampleIndex, int newAddress, byte[] brrData) {
+		// Get directory page from DSP register $5D
+		int dirPage = _currentProject!.DspRegisters[0x5d] << 8;
+		int dirEntry = dirPage + (sampleIndex * 4);
+
+		// Update start address (little-endian)
+		_currentProject.Ram[dirEntry] = (byte)(newAddress & 0xff);
+		_currentProject.Ram[dirEntry + 1] = (byte)((newAddress >> 8) & 0xff);
+
+		// Calculate loop address from BRR data
+		int loopAddress = newAddress; // Default to start if no loop
+		int addr = 0;
+		while (addr < brrData.Length - 9) {
+			byte header = brrData[addr];
+			if ((header & 0x02) != 0) { // Loop flag in BRR header
+				loopAddress = newAddress + addr;
+				break;
+			}
+			addr += 9; // BRR block size
+		}
+
+		// Update loop address (little-endian)
+		_currentProject.Ram[dirEntry + 2] = (byte)(loopAddress & 0xff);
+		_currentProject.Ram[dirEntry + 3] = (byte)((loopAddress >> 8) & 0xff);
 	}
 
 	#endregion

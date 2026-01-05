@@ -79,6 +79,36 @@ public sealed class SpcAnalyzer {
 			return;
 		}
 
+		// Check for Rare's driver
+		if (CheckRare()) {
+			DriverType = SoundDriverType.Rare;
+			return;
+		}
+
+		// Check for Enix's driver
+		if (CheckEnix()) {
+			DriverType = SoundDriverType.Enix;
+			return;
+		}
+
+		// Check for Hudson Soft's driver
+		if (CheckHudson()) {
+			DriverType = SoundDriverType.Hudson;
+			return;
+		}
+
+		// Check for Namco's driver
+		if (CheckNamco()) {
+			DriverType = SoundDriverType.Namco;
+			return;
+		}
+
+		// Check for Taito's driver
+		if (CheckTaito()) {
+			DriverType = SoundDriverType.Taito;
+			return;
+		}
+
 		DriverType = SoundDriverType.Unknown;
 	}
 
@@ -114,6 +144,48 @@ public sealed class SpcAnalyzer {
 	private bool CheckKonami() {
 		// Konami's driver (Castlevania, TMNT, etc.)
 		var signature = new byte[] { 0x20, 0x8f, 0x00, 0x00 };
+		return MatchSignature(_ram, 0x200, signature, 0xff);
+	}
+
+	private bool CheckRare() {
+		// Rare's driver (Donkey Kong Country, Killer Instinct)
+		// Rare used a distinctive driver with specific DSP setup patterns
+		// Often has compressed sample format and specific echo configuration
+		var signature1 = new byte[] { 0xcf, 0x8f, 0x00, 0xf1 };
+		var signature2 = new byte[] { 0x8f, 0xb0, 0xf1, 0x8f };
+
+		return MatchSignature(_ram, 0x200, signature1, 0xff) ||
+			   MatchSignature(_ram, 0x300, signature2, 0xff);
+	}
+
+	private bool CheckEnix() {
+		// Enix's driver (Dragon Quest, ActRaiser, Soul Blazer)
+		// Uses distinctive sequence format and instrument definitions
+		var signature1 = new byte[] { 0x8f, 0x00, 0xf4, 0x8f };
+		var signature2 = new byte[] { 0xcd, 0x00, 0x8f, 0x00 };
+
+		return MatchSignature(_ram, 0x200, signature1, 0xff) ||
+			   MatchSignature(_ram, 0x400, signature2, 0xff);
+	}
+
+	private bool CheckHudson() {
+		// Hudson Soft's driver (Bomberman, Star Soldier, Super Bonk)
+		// Has distinctive interrupt handling patterns
+		var signature = new byte[] { 0x8f, 0x80, 0xf1, 0x3f };
+		return MatchSignature(_ram, 0x200, signature, 0xff);
+	}
+
+	private bool CheckNamco() {
+		// Namco's driver (Tales series, Splatterhouse)
+		// Uses specific channel organization
+		var signature = new byte[] { 0xcf, 0xda, 0x00, 0x60 };
+		return MatchSignature(_ram, 0x200, signature, 0xff);
+	}
+
+	private bool CheckTaito() {
+		// Taito's driver (Bust-a-Move, Darius Twin)
+		// Distinctive startup sequence
+		var signature = new byte[] { 0x8f, 0xff, 0x00, 0xe8 };
 		return MatchSignature(_ram, 0x200, signature, 0xff);
 	}
 
@@ -319,8 +391,11 @@ public enum SoundDriverType {
 	HalLab,     // HAL Laboratory (Kirby, EarthBound)
 	Capcom,     // Capcom (Mega Man X, Street Fighter)
 	Konami,     // Konami (Castlevania, TMNT)
-	Rare,       // Rare (Donkey Kong Country)
+	Rare,       // Rare (Donkey Kong Country, Killer Instinct)
 	Enix,       // Enix (Dragon Quest, ActRaiser)
+	Hudson,     // Hudson Soft (Bomberman, Star Soldier)
+	Namco,      // Namco (Tales series, Splatterhouse)
+	Taito,      // Taito (Bust-a-Move, Darius Twin)
 	Custom,     // Custom/unknown driver
 }
 

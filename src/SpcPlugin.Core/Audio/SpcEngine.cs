@@ -23,9 +23,11 @@ public sealed class SpcEngine : IDisposable {
 
 	// Master controls
 
-	// Position tracking for DAW sync
+	// Position tracking for DAW sync (TODO: implement SetLoopPoints for DAW integration)
+#pragma warning disable CS0169 // Field is never used - reserved for future DAW loop sync
 	private long _loopStartSample;
 	private long _loopEndSample;
+#pragma warning restore CS0169
 
 	// Tempo sync (BPM from DAW)
 	private double _hostTimeSignatureDenominator = 4;

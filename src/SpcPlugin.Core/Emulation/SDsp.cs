@@ -342,7 +342,9 @@ public sealed class SDsp {
 
 		// Envelope state
 		private EnvelopeMode _envMode;
+#pragma warning disable CS0414 // Field assigned but never used - reserved for accurate envelope step timing
 		private int _envStep;
+#pragma warning restore CS0414
 
 		public Voice(SDsp dsp, int index) {
 			_dsp = dsp;

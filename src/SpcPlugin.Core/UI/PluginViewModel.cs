@@ -4,6 +4,7 @@ using SpcPlugin.Core.Audio;
 using SpcPlugin.Core.Editing;
 using SpcPlugin.Core.Midi;
 using SpcPlugin.Core.Presets;
+using SpcPlugin.Core.Project;
 
 namespace SpcPlugin.Core.UI;
 
@@ -13,6 +14,7 @@ namespace SpcPlugin.Core.UI;
 /// </summary>
 public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	private List<SpcPreset> _presets = [];
+	private ProjectManager? _projectManager;
 
 	public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -36,6 +38,11 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// The underlying SPC engine.
 	/// </summary>
 	public SpcEngine Engine { get; }
+
+	/// <summary>
+	/// The project manager for undo/redo and persistence.
+	/// </summary>
+	public ProjectManager? ProjectManager => _projectManager;
 
 	/// <summary>
 	/// The MIDI processor.
@@ -170,6 +177,26 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// </summary>
 	public DspViewModel Dsp { get; private set; } = null!;
 
+	/// <summary>
+	/// Whether undo is available.
+	/// </summary>
+	public bool CanUndo => _projectManager?.CanUndo ?? false;
+
+	/// <summary>
+	/// Whether redo is available.
+	/// </summary>
+	public bool CanRedo => _projectManager?.CanRedo ?? false;
+
+	/// <summary>
+	/// Whether there are unsaved changes.
+	/// </summary>
+	public bool HasUnsavedChanges => _projectManager?.HasUnsavedChanges ?? false;
+
+	/// <summary>
+	/// The current project file path.
+	/// </summary>
+	public string? ProjectPath => _projectManager?.CurrentPath;
+
 	#endregion
 
 	#region Commands
@@ -299,6 +326,134 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	}
 
 	/// <summary>
+	/// Creates a new project.
+	/// </summary>
+	public void NewProject(string name = "Untitled") {
+		_projectManager?.Dispose();
+		_projectManager = new ProjectManager();
+		_projectManager.NewProject(name);
+		_projectManager.UndoRedoStateChanged += OnUndoRedoStateChanged;
+		_projectManager.ProjectChanged += OnProjectManagerChanged;
+		NotifyUndoRedoState();
+	}
+
+	/// <summary>
+	/// Saves the project to the current path.
+	/// </summary>
+	public bool SaveProject() {
+		if (_projectManager == null || _projectManager.CurrentPath == null) {
+			return false;
+		}
+
+		_projectManager.SaveProject();
+		OnPropertyChanged(nameof(HasUnsavedChanges));
+		return true;
+	}
+
+	/// <summary>
+	/// Saves the project to a new path.
+	/// </summary>
+	public void SaveProjectAs(string path) {
+		_projectManager?.SaveProjectAs(path);
+		OnPropertyChanged(nameof(HasUnsavedChanges));
+		OnPropertyChanged(nameof(ProjectPath));
+	}
+
+	/// <summary>
+	/// Loads a project from disk.
+	/// </summary>
+	public void LoadProject(string path) {
+		_projectManager?.Dispose();
+		_projectManager = new ProjectManager();
+		_projectManager.LoadProject(path);
+		_projectManager.UndoRedoStateChanged += OnUndoRedoStateChanged;
+		_projectManager.ProjectChanged += OnProjectManagerChanged;
+		NotifyUndoRedoState();
+
+		// If project has embedded SPC data, sync with engine
+		if (_projectManager.CurrentProject?.Ram != null) {
+			SyncEngineFromProject();
+		}
+	}
+
+	/// <summary>
+	/// Imports an SPC file into a new project.
+	/// </summary>
+	public void ImportSpcToProject(string spcPath, string? projectName = null) {
+		_projectManager?.Dispose();
+		_projectManager = new ProjectManager();
+		_projectManager.ImportSpc(spcPath);
+		if (projectName != null && _projectManager.CurrentProject != null) {
+			_projectManager.CurrentProject.Manifest.Name = projectName;
+		}
+		_projectManager.UndoRedoStateChanged += OnUndoRedoStateChanged;
+		_projectManager.ProjectChanged += OnProjectManagerChanged;
+		NotifyUndoRedoState();
+
+		SyncEngineFromProject();
+	}
+
+	/// <summary>
+	/// Undoes the last operation.
+	/// </summary>
+	public void Undo() {
+		if (_projectManager?.CanUndo != true) return;
+
+		_projectManager.Undo();
+		SyncEngineFromProject();
+		RefreshAll();
+	}
+
+	/// <summary>
+	/// Redoes the last undone operation.
+	/// </summary>
+	public void Redo() {
+		if (_projectManager?.CanRedo != true) return;
+
+		_projectManager.Redo();
+		SyncEngineFromProject();
+		RefreshAll();
+	}
+
+	/// <summary>
+	/// Syncs the engine state from the project manager's data.
+	/// </summary>
+	private void SyncEngineFromProject() {
+		if (_projectManager?.CurrentProject == null || Engine.Editor == null) return;
+
+		// Copy RAM and DSP registers from project to engine
+		var project = _projectManager.CurrentProject;
+		project.Ram.AsSpan().CopyTo(Engine.Editor.Ram);
+		project.DspRegisters.AsSpan().CopyTo(Engine.Editor.DspRegisters);
+	}
+
+	/// <summary>
+	/// Syncs the project manager's data from the engine state.
+	/// </summary>
+	private void SyncProjectFromEngine() {
+		if (_projectManager?.CurrentProject == null || Engine.Editor == null) return;
+
+		// This would be called after editing to update project state
+		var project = _projectManager.CurrentProject;
+		Engine.Editor.Ram.CopyTo(project.Ram);
+		Engine.Editor.DspRegisters.CopyTo(project.DspRegisters);
+	}
+
+	private void OnUndoRedoStateChanged(object? sender, EventArgs e) {
+		NotifyUndoRedoState();
+	}
+
+	private void OnProjectManagerChanged(object? sender, ProjectChangedEventArgs e) {
+		OnPropertyChanged(nameof(HasUnsavedChanges));
+	}
+
+	private void NotifyUndoRedoState() {
+		OnPropertyChanged(nameof(CanUndo));
+		OnPropertyChanged(nameof(CanRedo));
+		OnPropertyChanged(nameof(HasUnsavedChanges));
+	}
+
+	/// <summary>
 	/// Last error message.
 	/// </summary>
 	public string LastError { get; private set; } = "";
@@ -357,6 +512,11 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	}
 
 	public void Dispose() {
+		if (_projectManager != null) {
+			_projectManager.UndoRedoStateChanged -= OnUndoRedoStateChanged;
+			_projectManager.ProjectChanged -= OnProjectManagerChanged;
+			_projectManager.Dispose();
+		}
 		Engine.Dispose();
 	}
 
