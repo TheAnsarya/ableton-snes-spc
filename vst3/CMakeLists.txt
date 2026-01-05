@@ -1,16 +1,14 @@
 cmake_minimum_required(VERSION 3.21)
-project(SnesSpcVst3
-	VERSION 0.1.0
-	DESCRIPTION "SNES SPC Music Plugin for editing and playing .spc files"
-	LANGUAGES CXX
-)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Build configuration option
 option(USE_NATIVE_AOT "Use Native AOT compiled .NET library" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
+
+# Disable VST3 SDK tools that require additional dependencies
+set(SMTG_CREATE_MODULE_INFO OFF CACHE BOOL "" FORCE)
+set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
+# Disable automatic symbolic link creation (requires admin on Windows)
+set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "" FORCE)
 
 # Find VST3 SDK
 # Set VST3_SDK_ROOT to the path of your VST3 SDK installation
@@ -22,16 +20,50 @@ if(NOT DEFINED VST3_SDK_ROOT)
 	endif()
 endif()
 
+# Convert backslashes to forward slashes for CMake compatibility
+file(TO_CMAKE_PATH "${VST3_SDK_ROOT}" VST3_SDK_ROOT)
+
 message(STATUS "VST3 SDK Root: ${VST3_SDK_ROOT}")
 
-# Include VST3 SDK
+# Set SDK root for the VST3 SDK modules
+set(SDK_ROOT "${VST3_SDK_ROOT}")
+set(public_sdk_SOURCE_DIR "${VST3_SDK_ROOT}/public.sdk")
+set(pluginterfaces_SOURCE_DIR "${VST3_SDK_ROOT}/pluginterfaces")
+
+# Include VST3 SDK cmake modules
 list(APPEND CMAKE_MODULE_PATH "${VST3_SDK_ROOT}/cmake/modules")
 include(SMTG_VST3_SDK)
+
+# Now we can declare the project
+project(SnesSpcVst3
+	VERSION 0.1.0
+	DESCRIPTION "SNES SPC Music Plugin for editing and playing .spc files"
+	LANGUAGES CXX
+)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Setup platform toolset  
+smtg_setup_platform_toolset()
+
+# Create base SDK targets
+smtg_create_lib_base_target()
+smtg_create_pluginterfaces_target()
+smtg_create_public_sdk_common_target()
+smtg_create_public_sdk_target()
+smtg_create_public_sdk_hosting_target()
+
+# Enable VSTGUI support
+option(SMTG_ENABLE_VSTGUI_SUPPORT "Enable VSTGUI support" ON)
+if(SMTG_ENABLE_VSTGUI_SUPPORT)
+	smtg_enable_vstgui_support(VSTGUI_SOURCE_DIR "${VST3_SDK_ROOT}/vstgui4")
+endif()
 
 # Define paths based on Native AOT setting
 if(USE_NATIVE_AOT)
 	message(STATUS "Using Native AOT compiled library")
-	set(DOTNET_LIB_DIR "${CMAKE_SOURCE_DIR}/../src/SpcPlugin.Core/bin/Release/net10.0/publish")
+	set(DOTNET_LIB_DIR "${CMAKE_SOURCE_DIR}/../src/SpcPlugin.Core/bin/${CMAKE_BUILD_TYPE}/net10.0/publish")
 	if(WIN32)
 		set(DOTNET_LIB_NAME "SpcPlugin.Core.dll")
 	else()
@@ -40,13 +72,15 @@ if(USE_NATIVE_AOT)
 	add_compile_definitions(USE_NATIVE_AOT=1)
 else()
 	message(STATUS "Using standard .NET runtime hosting")
-	set(DOTNET_LIB_DIR "${CMAKE_SOURCE_DIR}/../src/SpcPlugin.Core/bin/Release/net10.0")
+	set(DOTNET_LIB_DIR "${CMAKE_SOURCE_DIR}/../src/SpcPlugin.Core/bin/${CMAKE_BUILD_TYPE}/net10.0")
 	set(DOTNET_LIB_NAME "SpcPlugin.Core.dll")
 	add_compile_definitions(USE_NATIVE_AOT=0)
 endif()
 
 # Option for GUI
 option(SMTG_ENABLE_VSTGUI_SUPPORT "Enable VSTGUI support" ON)
+# Option to disable advanced custom views that need VSTGUI API updates
+option(ENABLE_CUSTOM_VIEWS "Enable custom view components (requires VSTGUI API compatibility)" OFF)
 
 # Plugin sources
 set(PLUGIN_SOURCES
@@ -67,19 +101,25 @@ if(SMTG_ENABLE_VSTGUI_SUPPORT)
 	list(APPEND PLUGIN_SOURCES
 		src/gui/spc_editor.cpp
 		src/gui/spc_editor.h
-		src/gui/waveform_view.cpp
-		src/gui/waveform_view.h
-		src/gui/preset_browser.cpp
-		src/gui/preset_browser.h
-		src/gui/spectrum_view.cpp
-		src/gui/spectrum_view.h
-		src/gui/view_switcher.cpp
-		src/gui/view_switcher.h
-		src/gui/keyboard_handler.cpp
-		src/gui/keyboard_handler.h
-		src/gui/midi_learn.cpp
-		src/gui/midi_learn.h
 	)
+	# Advanced custom views - disabled by default until VSTGUI API compatibility is fixed
+	if(ENABLE_CUSTOM_VIEWS)
+		list(APPEND PLUGIN_SOURCES
+			src/gui/waveform_view.cpp
+			src/gui/waveform_view.h
+			src/gui/preset_browser.cpp
+			src/gui/preset_browser.h
+			src/gui/spectrum_view.cpp
+			src/gui/spectrum_view.h
+			src/gui/view_switcher.cpp
+			src/gui/view_switcher.h
+			src/gui/keyboard_handler.cpp
+			src/gui/keyboard_handler.h
+			src/gui/midi_learn.cpp
+			src/gui/midi_learn.h
+		)
+		add_compile_definitions(ENABLE_CUSTOM_VIEWS=1)
+	endif()
 endif()
 
 # Add VST3 plugin
@@ -160,9 +200,26 @@ elseif(UNIX)
 	)
 endif()
 
-# Set VST3 plugin properties
-smtg_target_set_bundle_id(${PROJECT_NAME} "com.github.ableton-snes-spc")
+# Set VST3 plugin properties (macOS bundle settings)
+if(SMTG_MAC)
+	smtg_target_set_bundle(${PROJECT_NAME}
+		BUNDLE_IDENTIFIER "com.github.ableton-snes-spc"
+		COMPANY_NAME "GitHub"
+	)
+endif()
+
+# Configure version file for moduleinfo
 smtg_target_configure_version_file(${PROJECT_NAME})
+
+# Copy custom icon to output (Windows)
+if(WIN32)
+	add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			"${CMAKE_SOURCE_DIR}/resource/PlugIn.ico"
+			"${CMAKE_BINARY_DIR}/VST3/$<CONFIG>/${PROJECT_NAME}.vst3/PlugIn.ico"
+		COMMENT "Copying custom PlugIn.ico"
+	)
+endif()
 
 # Copy .NET assembly to output directory
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -187,9 +244,6 @@ if(USE_NATIVE_AOT)
 		endforeach()
 	endif()
 endif()
-
-# Installation
-smtg_target_install(${PROJECT_NAME})
 
 # Verbose output for debugging
 message(STATUS "Plugin Name: ${PROJECT_NAME}")

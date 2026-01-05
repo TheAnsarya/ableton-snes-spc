@@ -1,9 +1,11 @@
 #include "spc_editor.h"
+#if ENABLE_CUSTOM_VIEWS
 #include "waveform_view.h"
 #include "spectrum_view.h"
 #include "keyboard_handler.h"
 #include "preset_browser.h"
 #include "view_switcher.h"
+#endif
 #include "../spc_params.h"
 #include <algorithm>
 #include <cctype>
@@ -19,10 +21,12 @@ SpcEditor::SpcEditor(SpcController* controller, VSTGUI::UTF8StringPtr templateNa
 
 //------------------------------------------------------------------------
 SpcEditor::~SpcEditor() {
+#if ENABLE_CUSTOM_VIEWS
 	if (updateTimer_) {
 		updateTimer_->stop();
 		updateTimer_ = nullptr;
 	}
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -30,25 +34,29 @@ bool SpcEditor::open(void* parent, const VSTGUI::PlatformType& platformType) {
 	bool result = VST3Editor::open(parent, platformType);
 
 	if (result) {
-		// Find visualization views and panels
+		// Find panels
 		if (auto* frame = getFrame()) {
-			findVisualizationViews(frame);
 			findPanelViews(frame);
+
+#if ENABLE_CUSTOM_VIEWS
+			// Find visualization views
+			findVisualizationViews(frame);
 
 			// Register keyboard handler
 			keyboardHandler_ = std::make_unique<KeyboardHandler>(controller_);
 			frame->registerKeyboardHook(keyboardHandler_.get());
+
+			// Initialize preset browser with paths and callbacks
+			initializePresetBrowser();
+
+			// Start update timer (60 FPS for smooth visualization)
+			updateTimer_ = VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>(
+				[this](VSTGUI::CVSTGUITimer*) { onTimer(); },
+				16 // ~60 FPS
+			);
+			updateTimer_->start();
+#endif
 		}
-
-		// Initialize preset browser with paths and callbacks
-		initializePresetBrowser();
-
-		// Start update timer (60 FPS for smooth visualization)
-		updateTimer_ = VSTGUI::makeOwned<VSTGUI::CVSTGUITimer>(
-			[this](VSTGUI::CVSTGUITimer*) { onTimer(); },
-			16 // ~60 FPS
-		);
-		updateTimer_->start();
 
 		// Set initial panel visibility based on ViewMode parameter
 		updatePanelVisibility();
@@ -59,6 +67,7 @@ bool SpcEditor::open(void* parent, const VSTGUI::PlatformType& platformType) {
 
 //------------------------------------------------------------------------
 void SpcEditor::close() {
+#if ENABLE_CUSTOM_VIEWS
 	if (updateTimer_) {
 		updateTimer_->stop();
 		updateTimer_ = nullptr;
@@ -74,12 +83,15 @@ void SpcEditor::close() {
 	spectrumView_ = nullptr;
 	presetBrowser_ = nullptr;
 	viewSwitcher_ = nullptr;
+#endif
+
 	mixerPanel_ = nullptr;
 	samplesPanel_ = nullptr;
 	browserPanel_ = nullptr;
 	VST3Editor::close();
 }
 
+#if ENABLE_CUSTOM_VIEWS
 //------------------------------------------------------------------------
 void SpcEditor::findVisualizationViews(VSTGUI::CViewContainer* container) {
 	if (!container) return;
@@ -102,11 +114,12 @@ void SpcEditor::findVisualizationViews(VSTGUI::CViewContainer* container) {
 			viewSwitcher_ = vs;
 		}
 		// Recursively search containers
-		if (auto* container = dynamic_cast<VSTGUI::CViewContainer*>(child)) {
-			findVisualizationViews(container);
+		if (auto* vc = dynamic_cast<VSTGUI::CViewContainer*>(child)) {
+			findVisualizationViews(vc);
 		}
 	});
 }
+#endif
 
 //------------------------------------------------------------------------
 void SpcEditor::findPanelViews(VSTGUI::CViewContainer* container) {
@@ -115,17 +128,6 @@ void SpcEditor::findPanelViews(VSTGUI::CViewContainer* container) {
 	container->forEachChild([this](VSTGUI::CView* child) {
 		// Check for custom view names to identify panels
 		if (auto* viewContainer = dynamic_cast<VSTGUI::CViewContainer*>(child)) {
-			auto viewName = viewContainer->getAttributeID();
-			if (viewName) {
-				std::string name(viewName);
-				if (name == "MixerPanel") {
-					mixerPanel_ = viewContainer;
-				} else if (name == "SamplesPanel") {
-					samplesPanel_ = viewContainer;
-				} else if (name == "BrowserPanel") {
-					browserPanel_ = viewContainer;
-				}
-			}
 			// Recursively search containers
 			findPanelViews(viewContainer);
 		}
@@ -158,6 +160,7 @@ void SpcEditor::updatePanelVisibility() {
 	}
 }
 
+#if ENABLE_CUSTOM_VIEWS
 //------------------------------------------------------------------------
 void SpcEditor::initializePresetBrowser() {
 	if (!presetBrowser_) return;
@@ -288,45 +291,6 @@ std::string SpcEditor::extractFilePath(VSTGUI::IDataPackage* drag) {
 	}
 	return {};
 }
-
-//------------------------------------------------------------------------
-VSTGUI::DragOperation SpcEditor::onDragEnter(VSTGUI::IDataPackage* drag, const VSTGUI::CPoint& where) {
-	isDragOver_ = containsSpcFile(drag);
-	if (isDragOver_) {
-		// TODO: Update visual feedback (highlight drop zone)
-		return VSTGUI::DragOperation::Copy;
-	}
-	return VSTGUI::DragOperation::None;
-}
-
-//------------------------------------------------------------------------
-void SpcEditor::onDragLeave(VSTGUI::IDataPackage* drag, const VSTGUI::CPoint& where) {
-	isDragOver_ = false;
-	// TODO: Remove visual feedback
-}
-
-//------------------------------------------------------------------------
-VSTGUI::DragOperation SpcEditor::onDragMove(VSTGUI::IDataPackage* drag, const VSTGUI::CPoint& where) {
-	if (isDragOver_) {
-		return VSTGUI::DragOperation::Copy;
-	}
-	return VSTGUI::DragOperation::None;
-}
-
-//------------------------------------------------------------------------
-bool SpcEditor::onDrop(VSTGUI::IDataPackage* drag, const VSTGUI::CPoint& where) {
-	if (!containsSpcFile(drag)) {
-		return false;
-	}
-
-	auto filePath = extractFilePath(drag);
-	if (!filePath.empty() && controller_) {
-		controller_->loadSpcFile(filePath.c_str());
-		isDragOver_ = false;
-		return true;
-	}
-
-	return false;
-}
+#endif
 
 } // namespace SnesSpc

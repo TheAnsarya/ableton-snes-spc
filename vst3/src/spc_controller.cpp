@@ -4,8 +4,11 @@
 #include "pluginterfaces/base/ibstream.h"
 #include <cstring>
 
-#if VSTGUI_ENABLE
+#if SMTG_ENABLE_VSTGUI_SUPPORT
 #include "gui/spc_editor.h"
+#endif
+
+#if ENABLE_CUSTOM_VIEWS
 #include "gui/midi_learn.h"
 #endif
 
@@ -21,7 +24,7 @@ Steinberg::tresult PLUGIN_API SpcController::initialize(Steinberg::FUnknown* con
 		return result;
 	}
 
-#if VSTGUI_ENABLE
+#if ENABLE_CUSTOM_VIEWS
 	// Create MIDI learn handler
 	midiLearnHandler_ = std::make_unique<MidiLearnHandler>(this);
 #endif
@@ -264,6 +267,7 @@ Steinberg::tresult PLUGIN_API SpcController::notify(Steinberg::Vst::IMessage* me
 		return Steinberg::kResultOk;
 	}
 
+#if ENABLE_CUSTOM_VIEWS
 	if (strcmp(msgId, kMsgWaveformData) == 0) {
 		// Receive waveform data from processor
 		Steinberg::int64 sampleCount = 0;
@@ -296,6 +300,7 @@ Steinberg::tresult PLUGIN_API SpcController::notify(Steinberg::Vst::IMessage* me
 		}
 		return Steinberg::kResultOk;
 	}
+#endif
 
 	return EditController::notify(message);
 }
@@ -330,7 +335,7 @@ bool SpcController::loadSpcData(const uint8_t* data, int length) {
 	return false;
 }
 
-#if VSTGUI_ENABLE
+#if SMTG_ENABLE_VSTGUI_SUPPORT
 Steinberg::IPlugView* PLUGIN_API SpcController::createView(Steinberg::FIDString name) {
 	if (Steinberg::FIDStringsEqual(name, Steinberg::Vst::ViewType::kEditor)) {
 		return new SpcEditor(this, "SpcEditorView", "spc_editor.uidesc");
@@ -339,28 +344,23 @@ Steinberg::IPlugView* PLUGIN_API SpcController::createView(Steinberg::FIDString 
 }
 #endif
 
+#if ENABLE_CUSTOM_VIEWS
 void SpcController::startMidiLearn(int paramId) {
-#if VSTGUI_ENABLE
 	if (midiLearnHandler_) {
 		midiLearnHandler_->startLearn(paramId);
 	}
-#endif
 }
 
 void SpcController::cancelMidiLearn() {
-#if VSTGUI_ENABLE
 	if (midiLearnHandler_) {
 		midiLearnHandler_->cancelLearn();
 	}
-#endif
 }
 
 bool SpcController::processMidiCC(int channel, int ccNumber, int value) {
-#if VSTGUI_ENABLE
 	if (midiLearnHandler_) {
 		return midiLearnHandler_->processMidiCC(channel, ccNumber, value);
 	}
-#endif
 	return false;
 }
 
@@ -381,5 +381,6 @@ bool SpcController::getWaveformData(std::vector<float>& left, std::vector<float>
 	right = waveformRight_;
 	return true;
 }
+#endif
 
 } // namespace SnesSpc

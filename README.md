@@ -166,9 +166,10 @@ ableton-snes-spc/
 ### Prerequisites
 
 - .NET 10 SDK
-- Visual Studio 2022 with C++ workload
-- CMake 3.25+
-- Ableton Live 11+ (for testing)
+- Visual Studio 2022 Build Tools with C++ workload
+- CMake 3.21+
+- VST3 SDK (cloned to `C:\vst3sdk`)
+- Ableton Live 11+ (for testing) or another VST3 host
 
 ### Building
 
@@ -177,11 +178,38 @@ ableton-snes-spc/
 git clone https://github.com/TheAnsarya/ableton-snes-spc.git
 cd ableton-snes-spc
 
-# Build the solution
-dotnet build
+# Clone VST3 SDK (if not already installed)
+git clone --recursive https://github.com/steinbergmedia/vst3sdk.git C:\vst3sdk
 
-# Run tests
-dotnet test
+# Build the VST3 plugin
+$env:VST3_SDK_ROOT = "C:/vst3sdk"
+.\build-vst3.ps1
+
+# Install to user VST3 folder
+.\build-vst3.ps1 -Install
+
+# Or install manually
+Copy-Item -Recurse build\VST3\Debug\SnesSpcVst3.vst3 "$env:LOCALAPPDATA\Programs\Common\VST3\"
+```
+
+### Build Options
+
+```powershell
+.\build-vst3.ps1              # Debug build
+.\build-vst3.ps1 -Release     # Release build
+.\build-vst3.ps1 -Clean       # Clean build
+.\build-vst3.ps1 -Install     # Build and install
+.\build-vst3.ps1 -NativeAot   # Build with Native AOT
+```
+
+## 🎨 Plugin Icon
+
+The plugin features a custom icon with a musical note surrounded by colorful Japanese Super Famicom ABXY buttons.
+
+To regenerate the icon:
+```powershell
+pip install svglib reportlab Pillow
+python tools/generate_icon.py
 ```
 
 ## 📄 License

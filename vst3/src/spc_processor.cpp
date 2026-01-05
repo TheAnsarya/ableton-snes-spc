@@ -3,6 +3,7 @@
 #include "spc_messages.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
+#include "pluginterfaces/base/ibstream.h"
 #include <filesystem>
 #include <cstring>
 
@@ -577,14 +578,15 @@ void SpcProcessor::updateSampleEnvelope() {
 		return;
 	}
 
+	// ADSR values are stored as: sampleAdsr_[0]=attack, [1]=decay, [2]=sustain, [3]=release
 	// Pack ADSR into SPC format: attack (0-15), decay (0-7), sustain (0-7), release (0-31)
-	// ADSR1: [attack:4][decay:3][enable:1]
-	// ADSR2: [sustain:3][release:5]
-	uint8_t adsr1 = static_cast<uint8_t>((sampleAdsr_[0] << 4) | (sampleAdsr_[1] << 1) | 0x80);
-	uint8_t adsr2 = static_cast<uint8_t>((sampleAdsr_[2] << 5) | sampleAdsr_[3]);
-	uint16_t adsrPacked = (adsr1 << 8) | adsr2;
+	int attack = sampleAdsr_[0];
+	int decay = sampleAdsr_[1];
+	int sustain = sampleAdsr_[2];
+	int release = sampleAdsr_[3];
 
-	dotnetHost_->setSampleEnvelope(engineHandle_, 0, adsrPacked);
+	// Apply to voice 0 (or all voices as needed)
+	dotnetHost_->setSampleEnvelope(engineHandle_, 0, attack, decay, sustain, release);
 }
 
 void SpcProcessor::forwardMidiCCToController(int channel, int ccNumber, int value) {
