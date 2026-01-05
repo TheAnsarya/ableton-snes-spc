@@ -257,6 +257,83 @@ public sealed class SpcEditor {
 		}
 	}
 
+	/// <summary>
+	/// Sets echo enabled for voices (convenience method).
+	/// </summary>
+	public void SetEchoEnabled(int voiceMask) {
+		EchoEnable = (byte)voiceMask;
+	}
+
+	/// <summary>
+	/// Sets noise enabled for voices (convenience method).
+	/// </summary>
+	public void SetNoiseEnabled(int voiceMask) {
+		NoiseEnable = (byte)voiceMask;
+	}
+
+	/// <summary>
+	/// Sets pitch modulation enabled for voices (convenience method).
+	/// </summary>
+	public void SetPitchModEnabled(int voiceMask) {
+		PitchModulation = (byte)voiceMask;
+	}
+
+	/// <summary>
+	/// Sets echo feedback (convenience method).
+	/// </summary>
+	public void SetEchoFeedback(int feedback) {
+		EchoFeedback = (sbyte)feedback;
+	}
+
+	/// <summary>
+	/// Sets echo delay (convenience method).
+	/// </summary>
+	public void SetEchoDelay(int delay) {
+		EchoDelay = (byte)delay;
+	}
+
+	/// <summary>
+	/// Sets echo volume (convenience method).
+	/// </summary>
+	public void SetEchoVolume(int left, int right) {
+		EchoVolume = ((sbyte)left, (sbyte)right);
+	}
+
+	/// <summary>
+	/// Sets main volume (convenience method).
+	/// </summary>
+	public void SetMainVolume(int left, int right) {
+		MainVolume = ((sbyte)left, (sbyte)right);
+	}
+
+	/// <summary>
+	/// Triggers key-on for a voice.
+	/// </summary>
+	public void KeyOnVoice(int voice) {
+		ValidateVoice(voice);
+		_dspRegisters[0x4c] = (byte)(1 << voice);
+		_modified = true;
+	}
+
+	/// <summary>
+	/// Triggers key-off for a voice.
+	/// </summary>
+	public void KeyOffVoice(int voice) {
+		ValidateVoice(voice);
+		_dspRegisters[0x5c] = (byte)(1 << voice);
+		_modified = true;
+	}
+
+	/// <summary>
+	/// Sets voice ADSR parameters with individual values.
+	/// </summary>
+	public void SetVoiceAdsr(int voice, int attack, int decay, int sustain, int release) {
+		ValidateVoice(voice);
+		byte adsr1 = (byte)(0x80 | ((decay & 0x07) << 4) | (attack & 0x0f));
+		byte adsr2 = (byte)(((sustain & 0x07) << 5) | (release & 0x1f));
+		SetVoiceAdsr(voice, adsr1, adsr2);
+	}
+
 	#endregion
 
 	#region Sample Directory

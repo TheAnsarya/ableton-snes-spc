@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using SpcPlugin.Core.Audio;
+using SpcPlugin.Core.Midi;
 
 namespace SpcPlugin.Core.Interop;
 
@@ -10,6 +11,7 @@ namespace SpcPlugin.Core.Interop;
 public static unsafe class NativeExports {
 	// Engine instance registry (GCHandle to prevent collection)
 	private static readonly Dictionary<nint, GCHandle> _engines = [];
+	private static readonly Dictionary<nint, MidiProcessor> _midiProcessors = [];
 	private static int _nextId = 1;
 
 	#region Engine Lifecycle
@@ -25,6 +27,7 @@ public static unsafe class NativeExports {
 			var handle = GCHandle.Alloc(engine);
 			nint id = _nextId++;
 			_engines[id] = handle;
+			_midiProcessors[id] = new MidiProcessor(engine);
 			return id;
 		} catch {
 			return 0;
@@ -42,6 +45,7 @@ public static unsafe class NativeExports {
 			}
 			handle.Free();
 			_engines.Remove(engineId);
+			_midiProcessors.Remove(engineId);
 		}
 	}
 
@@ -249,6 +253,70 @@ public static unsafe class NativeExports {
 	public static void SetSampleRate(nint engineId, int sampleRate) {
 		if (GetEngine(engineId) is { } engine) {
 			engine.SampleRate = sampleRate;
+		}
+	}
+
+	#endregion
+
+	#region MIDI
+
+	/// <summary>
+	/// Process a MIDI note on event.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_midi_note_on")]
+	public static void MidiNoteOn(nint engineId, int channel, int note, int velocity) {
+		if (_midiProcessors.TryGetValue(engineId, out var midi)) {
+			midi.ProcessEvent(MidiEvent.NoteOn(channel, note, velocity));
+		}
+	}
+
+	/// <summary>
+	/// Process a MIDI note off event.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_midi_note_off")]
+	public static void MidiNoteOff(nint engineId, int channel, int note, int velocity) {
+		if (_midiProcessors.TryGetValue(engineId, out var midi)) {
+			midi.ProcessEvent(MidiEvent.NoteOff(channel, note, velocity));
+		}
+	}
+
+	/// <summary>
+	/// Process a MIDI control change event.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_midi_cc")]
+	public static void MidiControlChange(nint engineId, int channel, int controller, int value) {
+		if (_midiProcessors.TryGetValue(engineId, out var midi)) {
+			midi.ProcessEvent(MidiEvent.ControlChange(channel, controller, value));
+		}
+	}
+
+	/// <summary>
+	/// Process a MIDI pitch bend event.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_midi_pitch_bend")]
+	public static void MidiPitchBend(nint engineId, int channel, int value) {
+		if (_midiProcessors.TryGetValue(engineId, out var midi)) {
+			midi.ProcessEvent(MidiEvent.PitchBend(channel, value));
+		}
+	}
+
+	/// <summary>
+	/// Set the pitch bend range in semitones.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_midi_set_pitch_bend_range")]
+	public static void MidiSetPitchBendRange(nint engineId, int semitones) {
+		if (_midiProcessors.TryGetValue(engineId, out var midi)) {
+			midi.PitchBendRange = semitones;
+		}
+	}
+
+	/// <summary>
+	/// Reset all MIDI state.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_midi_reset")]
+	public static void MidiReset(nint engineId) {
+		if (_midiProcessors.TryGetValue(engineId, out var midi)) {
+			midi.Reset();
 		}
 	}
 
