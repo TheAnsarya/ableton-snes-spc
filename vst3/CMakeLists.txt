@@ -45,6 +45,9 @@ else()
 	add_compile_definitions(USE_NATIVE_AOT=0)
 endif()
 
+# Option for GUI
+option(SMTG_ENABLE_VSTGUI_SUPPORT "Enable VSTGUI support" ON)
+
 # Plugin sources
 set(PLUGIN_SOURCES
 	src/spc_controller.cpp
@@ -54,9 +57,18 @@ set(PLUGIN_SOURCES
 	src/spc_factory.cpp
 	src/spc_ids.h
 	src/spc_params.h
+	src/spc_messages.h
 	src/dotnet_host.cpp
 	src/dotnet_host.h
 )
+
+# GUI sources (optional)
+if(SMTG_ENABLE_VSTGUI_SUPPORT)
+	list(APPEND PLUGIN_SOURCES
+		src/gui/spc_editor.cpp
+		src/gui/spc_editor.h
+	)
+endif()
 
 # Add VST3 plugin
 smtg_add_vst3plugin(${PROJECT_NAME}
@@ -78,6 +90,23 @@ target_link_libraries(${PROJECT_NAME}
 		base
 		pluginterfaces
 )
+
+# VSTGUI support
+if(SMTG_ENABLE_VSTGUI_SUPPORT)
+	target_link_libraries(${PROJECT_NAME}
+		PRIVATE
+			vstgui_support
+	)
+	target_compile_definitions(${PROJECT_NAME}
+		PRIVATE
+			VSTGUI_ENABLE=1
+	)
+	# Add resource file
+	smtg_target_add_plugin_resources(${PROJECT_NAME}
+		RESOURCES
+			resource/spc_editor.uidesc
+	)
+endif()
 
 # Platform-specific settings
 if(WIN32)

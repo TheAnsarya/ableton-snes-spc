@@ -2,7 +2,9 @@
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include "pluginterfaces/vst/ivstevents.h"
+#include "pluginterfaces/vst/ivstmessage.h"
 #include "spc_params.h"
+#include "spc_messages.h"
 #include "dotnet_host.h"
 #include <memory>
 #include <vector>
@@ -28,6 +30,7 @@ public:
 	Steinberg::tresult PLUGIN_API canProcessSampleSize(Steinberg::int32 symbolicSampleSize) override;
 	Steinberg::tresult PLUGIN_API setState(Steinberg::IBStream* state) override;
 	Steinberg::tresult PLUGIN_API getState(Steinberg::IBStream* state) override;
+	Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) override;
 
 	// Load SPC file
 	bool loadSpcFile(const char* filePath);

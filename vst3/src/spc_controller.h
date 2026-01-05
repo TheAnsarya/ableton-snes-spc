@@ -1,7 +1,9 @@
 #pragma once
 
 #include "public.sdk/source/vst/vsteditcontroller.h"
+#include "pluginterfaces/vst/ivstmessage.h"
 #include "spc_params.h"
+#include "spc_messages.h"
 
 namespace SnesSpc {
 
@@ -16,6 +18,15 @@ public:
 	Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) override;
 	Steinberg::tresult PLUGIN_API terminate() override;
 	Steinberg::tresult PLUGIN_API setComponentState(Steinberg::IBStream* state) override;
+	Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) override;
+
+	// Public methods for UI to call
+	bool loadSpcFile(const char* filePath);
+	bool loadSpcData(const uint8_t* data, int length);
+
+private:
+	bool spcLoaded_ = false;
+	std::string currentSpcPath_;
 };
 
 } // namespace SnesSpc

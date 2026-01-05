@@ -1,8 +1,10 @@
 #include "spc_processor.h"
 #include "spc_ids.h"
+#include "spc_messages.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include <filesystem>
+#include <cstring>
 
 namespace SnesSpc {
 
@@ -153,6 +155,26 @@ Steinberg::tresult PLUGIN_API SpcProcessor::process(Steinberg::Vst::ProcessData&
 							}
 							break;
 						}
+						// Handle pitch bend (per channel)
+						case kParamPitchBend0: case kParamPitchBend1: case kParamPitchBend2: case kParamPitchBend3:
+						case kParamPitchBend4: case kParamPitchBend5: case kParamPitchBend6: case kParamPitchBend7: {
+							int channel = paramId - kParamPitchBend0;
+							// Convert 0-1 to MIDI pitch bend (0-16383, center at 8192)
+							int pitchBendValue = static_cast<int>(value * 16383);
+							if (dotnetHost_ && engineHandle_) {
+								dotnetHost_->midiPitchBend(engineHandle_, channel, pitchBendValue);
+							}
+							break;
+						}
+						// Handle pitch bend range
+						case kParamPitchBendRange: {
+							// Map 0-1 to 1-24 semitones
+							int semitones = 1 + static_cast<int>(value * 23);
+							if (dotnetHost_ && engineHandle_) {
+								dotnetHost_->midiSetPitchBendRange(engineHandle_, semitones);
+							}
+							break;
+						}
 					}
 				}
 			}
@@ -223,6 +245,51 @@ Steinberg::tresult PLUGIN_API SpcProcessor::canProcessSampleSize(Steinberg::int3
 		return Steinberg::kResultTrue;
 	}
 	return Steinberg::kResultFalse;
+}
+
+Steinberg::tresult PLUGIN_API SpcProcessor::notify(Steinberg::Vst::IMessage* message) {
+	if (!message) {
+		return Steinberg::kResultFalse;
+	}
+
+	const char* msgId = message->getMessageID();
+
+	if (strcmp(msgId, kMsgLoadSpcFile) == 0) {
+		// Load SPC from file path
+		const void* data = nullptr;
+		Steinberg::uint32 size = 0;
+		if (message->getAttributes()->getBinary(kAttrFilePath, data, size) == Steinberg::kResultOk) {
+			std::string filePath(static_cast<const char*>(data), size);
+			if (loadSpcFile(filePath.c_str())) {
+				// Send success notification back
+				if (auto* reply = allocateMessage()) {
+					reply->setMessageID(kMsgSpcLoaded);
+					sendMessage(reply);
+					reply->release();
+				}
+			}
+		}
+		return Steinberg::kResultOk;
+	}
+
+	if (strcmp(msgId, kMsgLoadSpcData) == 0) {
+		// Load SPC from binary data
+		const void* data = nullptr;
+		Steinberg::uint32 size = 0;
+		if (message->getAttributes()->getBinary(kAttrSpcData, data, size) == Steinberg::kResultOk) {
+			if (loadSpcData(static_cast<const uint8_t*>(data), static_cast<int>(size))) {
+				// Send success notification back
+				if (auto* reply = allocateMessage()) {
+					reply->setMessageID(kMsgSpcLoaded);
+					sendMessage(reply);
+					reply->release();
+				}
+			}
+		}
+		return Steinberg::kResultOk;
+	}
+
+	return AudioEffect::notify(message);
 }
 
 Steinberg::tresult PLUGIN_API SpcProcessor::setState(Steinberg::IBStream* state) {
@@ -405,6 +472,16 @@ void SpcProcessor::processMidiEvents(Steinberg::Vst::IEventList* events) {
 						event.midiCCOut.channel,
 						event.midiCCOut.controlNumber,
 						event.midiCCOut.value
+					);
+					break;
+
+				case Steinberg::Vst::Event::kPolyPressureEvent:
+					// Aftertouch - map to CC
+					dotnetHost_->midiControlChange(
+						engineHandle_,
+						event.polyPressure.channel,
+						1, // Modulation wheel
+						static_cast<int>(event.polyPressure.pressure * 127)
 					);
 					break;
 

@@ -41,6 +41,19 @@ enum ParamID : Steinberg::Vst::ParamID {
 	kParamVoiceVol6 = 306,
 	kParamVoiceVol7 = 307,
 
+	// Pitch bend (per channel, 0-15)
+	kParamPitchBend0 = 400,
+	kParamPitchBend1 = 401,
+	kParamPitchBend2 = 402,
+	kParamPitchBend3 = 403,
+	kParamPitchBend4 = 404,
+	kParamPitchBend5 = 405,
+	kParamPitchBend6 = 406,
+	kParamPitchBend7 = 407,
+
+	// Pitch bend range (semitones)
+	kParamPitchBendRange = 500,
+
 	kNumParams
 };
 

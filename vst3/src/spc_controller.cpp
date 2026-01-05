@@ -2,6 +2,7 @@
 #include "spc_ids.h"
 #include "base/source/fstreamer.h"
 #include "pluginterfaces/base/ibstream.h"
+#include <cstring>
 
 namespace SnesSpc {
 
@@ -104,6 +105,33 @@ Steinberg::tresult PLUGIN_API SpcController::initialize(Steinberg::FUnknown* con
 		);
 	}
 
+	// Pitch bend parameters (per channel)
+	const char16_t* pitchBendNames[] = {
+		STR16("Pitch Bend 1"), STR16("Pitch Bend 2"), STR16("Pitch Bend 3"), STR16("Pitch Bend 4"),
+		STR16("Pitch Bend 5"), STR16("Pitch Bend 6"), STR16("Pitch Bend 7"), STR16("Pitch Bend 8")
+	};
+
+	for (int i = 0; i < 8; i++) {
+		parameters.addParameter(
+			pitchBendNames[i],
+			nullptr,
+			0,
+			0.5, // Center position
+			Steinberg::Vst::ParameterInfo::kCanAutomate,
+			kParamPitchBend0 + i
+		);
+	}
+
+	// Pitch bend range
+	parameters.addParameter(
+		STR16("Pitch Bend Range"),
+		STR16("st"),
+		23, // 1-24 semitones
+		(2.0 - 1.0) / 23.0, // Default 2 semitones
+		Steinberg::Vst::ParameterInfo::kCanAutomate,
+		kParamPitchBendRange
+	);
+
 	return Steinberg::kResultOk;
 }
 
@@ -118,6 +146,58 @@ Steinberg::tresult PLUGIN_API SpcController::setComponentState(Steinberg::IBStre
 
 	// TODO: Sync controller state with processor state
 	return Steinberg::kResultOk;
+}
+
+Steinberg::tresult PLUGIN_API SpcController::notify(Steinberg::Vst::IMessage* message) {
+	if (!message) {
+		return Steinberg::kResultFalse;
+	}
+
+	const char* msgId = message->getMessageID();
+
+	if (strcmp(msgId, kMsgSpcLoaded) == 0) {
+		spcLoaded_ = true;
+		// TODO: Update UI to reflect loaded state
+		return Steinberg::kResultOk;
+	}
+
+	if (strcmp(msgId, kMsgSpcError) == 0) {
+		spcLoaded_ = false;
+		// TODO: Show error in UI
+		return Steinberg::kResultOk;
+	}
+
+	return EditController::notify(message);
+}
+
+bool SpcController::loadSpcFile(const char* filePath) {
+	if (!filePath) return false;
+
+	currentSpcPath_ = filePath;
+
+	// Send message to processor to load the file
+	if (auto* msg = allocateMessage()) {
+		msg->setMessageID(kMsgLoadSpcFile);
+		msg->getAttributes()->setBinary(kAttrFilePath, filePath, static_cast<Steinberg::uint32>(strlen(filePath)));
+		sendMessage(msg);
+		msg->release();
+		return true;
+	}
+	return false;
+}
+
+bool SpcController::loadSpcData(const uint8_t* data, int length) {
+	if (!data || length <= 0) return false;
+
+	// Send message to processor to load the data
+	if (auto* msg = allocateMessage()) {
+		msg->setMessageID(kMsgLoadSpcData);
+		msg->getAttributes()->setBinary(kAttrSpcData, data, static_cast<Steinberg::uint32>(length));
+		sendMessage(msg);
+		msg->release();
+		return true;
+	}
+	return false;
 }
 
 } // namespace SnesSpc
