@@ -91,6 +91,9 @@ public:
 	int getSamplePcmData(intptr_t engine, int sourceNumber, int16_t* buffer, int maxSamples);
 	int getSampleInfo(intptr_t engine, int sourceNumber, int* startAddr, int* loopAddr, int* hasLoop);
 
+	// Waveform visualization
+	int getWaveform(intptr_t engine, float* leftBuffer, float* rightBuffer, int maxSamples);
+
 private:
 	void* libraryHandle_ = nullptr;
 
@@ -142,6 +145,7 @@ private:
 	using GetSampleCountFunc = int (*)(intptr_t);
 	using GetSamplePcmDataFunc = int (*)(intptr_t, int, int16_t*, int);
 	using GetSampleInfoFunc = int (*)(intptr_t, int, int*, int*, int*);
+	using GetWaveformFunc = int (*)(intptr_t, float*, float*, int);
 
 	CreateEngineFunc createEngineFunc_ = nullptr;
 	DestroyEngineFunc destroyEngineFunc_ = nullptr;
@@ -190,6 +194,7 @@ private:
 	GetSampleCountFunc getSampleCountFunc_ = nullptr;
 	GetSamplePcmDataFunc getSamplePcmDataFunc_ = nullptr;
 	GetSampleInfoFunc getSampleInfoFunc_ = nullptr;
+	GetWaveformFunc getWaveformFunc_ = nullptr;
 
 	// Helper to load function pointer
 	template<typename T>

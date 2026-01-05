@@ -2,6 +2,8 @@
 #include "vstgui/uidescription/uiviewcreator.h"
 #include <algorithm>
 #include <cctype>
+#include <fstream>
+#include <sstream>
 
 namespace SnesSpc {
 
@@ -202,27 +204,77 @@ void PresetBrowser::removeSearchPath(const std::string& path) {
 		searchPaths_.end());
 }
 
+void PresetBrowser::saveFavorites(const std::string& path) {
+	std::ofstream file(path);
+	if (!file.is_open()) return;
+
+	for (const auto& preset : allPresets_) {
+		if (preset.isFavorite) {
+			// Format: path|name|game
+			file << preset.path << "|" << preset.name << "|" << preset.game << "\n";
+		}
+	}
+}
+
+void PresetBrowser::loadFavorites(const std::string& path) {
+	std::ifstream file(path);
+	if (!file.is_open()) return;
+
+	std::string line;
+	std::vector<std::string> favoritePaths;
+
+	while (std::getline(file, line)) {
+		if (line.empty()) continue;
+
+		// Parse path|name|game format
+		size_t firstDelim = line.find('|');
+		if (firstDelim != std::string::npos) {
+			favoritePaths.push_back(line.substr(0, firstDelim));
+		}
+	}
+
+	// Mark matching presets as favorites
+	for (auto& preset : allPresets_) {
+		preset.isFavorite = std::find(favoritePaths.begin(), favoritePaths.end(), preset.path) != favoritePaths.end();
+	}
+
+	applyFilter();
+}
+
 void PresetBrowser::draw(VSTGUI::CDrawContext* context) {
 	// Draw background
 	context->setFillColor(VSTGUI::CColor(35, 35, 35));
 	context->drawRect(getViewSize(), VSTGUI::kDrawFilled);
 
 	const VSTGUI::CRect& bounds = getViewSize();
-	float y = bounds.top - scrollOffset_;
+
+	// Calculate content area (excluding scrollbar)
+	VSTGUI::CRect contentBounds = bounds;
+	if (getMaxScrollOffset() > 0) {
+		contentBounds.right -= scrollbarWidth_;
+	}
+
+	float y = contentBounds.top - scrollOffset_;
 
 	for (size_t i = 0; i < filteredPresets_.size(); i++) {
-		if (y + itemHeight_ < bounds.top) {
+		if (y + itemHeight_ < contentBounds.top) {
 			y += itemHeight_;
 			continue;
 		}
-		if (y > bounds.bottom) {
+		if (y > contentBounds.bottom) {
 			break;
 		}
 
-		VSTGUI::CRect itemRect(bounds.left, y, bounds.right, y + itemHeight_);
+		VSTGUI::CRect itemRect(contentBounds.left, y, contentBounds.right, y + itemHeight_);
 		drawPresetItem(context, itemRect, filteredPresets_[i], i == selectedIndex_);
 
 		y += itemHeight_;
+	}
+
+	// Draw scrollbar if needed
+	if (getMaxScrollOffset() > 0) {
+		VSTGUI::CRect scrollbarRect(bounds.right - scrollbarWidth_, bounds.top, bounds.right, bounds.bottom);
+		drawScrollbar(context, scrollbarRect);
 	}
 
 	// Draw border
@@ -268,6 +320,12 @@ void PresetBrowser::drawPresetItem(VSTGUI::CDrawContext* context, const VSTGUI::
 }
 
 VSTGUI::CMouseEventResult PresetBrowser::onMouseDown(VSTGUI::CPoint& where, const VSTGUI::CButtonState& buttons) {
+	// Check scrollbar first
+	if (hitTestScrollbar(where)) {
+		isDraggingScrollbar_ = true;
+		return VSTGUI::kMouseEventHandled;
+	}
+
 	size_t index = hitTest(where);
 	if (index != SIZE_MAX) {
 		if (buttons.isDoubleClick()) {
@@ -281,19 +339,92 @@ VSTGUI::CMouseEventResult PresetBrowser::onMouseDown(VSTGUI::CPoint& where, cons
 	return CViewContainer::onMouseDown(where, buttons);
 }
 
+VSTGUI::CMouseEventResult PresetBrowser::onMouseMoved(VSTGUI::CPoint& where, const VSTGUI::CButtonState& buttons) {
+	if (isDraggingScrollbar_ && buttons.isLeftButton()) {
+		const VSTGUI::CRect& bounds = getViewSize();
+		float maxScroll = getMaxScrollOffset();
+		float trackHeight = bounds.getHeight();
+		float relativeY = (where.y - bounds.top) / trackHeight;
+		scrollOffset_ = relativeY * maxScroll;
+		clampScrollOffset();
+		invalid();
+		return VSTGUI::kMouseEventHandled;
+	}
+	isDraggingScrollbar_ = false;
+	return CViewContainer::onMouseMoved(where, buttons);
+}
+
+bool PresetBrowser::onWheel(const VSTGUI::CPoint& where, const VSTGUI::CMouseWheelAxis& axis, const float& distance, const VSTGUI::CButtonState& buttons) {
+	if (axis == VSTGUI::kMouseWheelAxisY) {
+		scrollOffset_ -= distance * itemHeight_ * 3;
+		clampScrollOffset();
+		invalid();
+		return true;
+	}
+	return CViewContainer::onWheel(where, axis, distance, buttons);
+}
+
 size_t PresetBrowser::hitTest(const VSTGUI::CPoint& point) {
 	const VSTGUI::CRect& bounds = getViewSize();
-	if (!bounds.pointInside(point)) {
+
+	// Exclude scrollbar area
+	VSTGUI::CRect contentBounds = bounds;
+	if (getMaxScrollOffset() > 0) {
+		contentBounds.right -= scrollbarWidth_;
+	}
+
+	if (!contentBounds.pointInside(point)) {
 		return SIZE_MAX;
 	}
 
-	float relativeY = point.y - bounds.top + scrollOffset_;
+	float relativeY = point.y - contentBounds.top + scrollOffset_;
 	size_t index = static_cast<size_t>(relativeY / itemHeight_);
 
 	if (index < filteredPresets_.size()) {
 		return index;
 	}
 	return SIZE_MAX;
+}
+
+bool PresetBrowser::hitTestScrollbar(const VSTGUI::CPoint& point) {
+	if (getMaxScrollOffset() <= 0) return false;
+
+	const VSTGUI::CRect& bounds = getViewSize();
+	VSTGUI::CRect scrollbarRect(bounds.right - scrollbarWidth_, bounds.top, bounds.right, bounds.bottom);
+	return scrollbarRect.pointInside(point);
+}
+
+float PresetBrowser::getMaxScrollOffset() const {
+	float totalHeight = filteredPresets_.size() * itemHeight_;
+	float visibleHeight = getViewSize().getHeight();
+	return std::max(0.0f, totalHeight - visibleHeight);
+}
+
+void PresetBrowser::clampScrollOffset() {
+	scrollOffset_ = std::clamp(scrollOffset_, 0.0f, getMaxScrollOffset());
+}
+
+void PresetBrowser::drawScrollbar(VSTGUI::CDrawContext* context, const VSTGUI::CRect& rect) {
+	// Track background
+	context->setFillColor(VSTGUI::CColor(45, 45, 45));
+	context->drawRect(rect, VSTGUI::kDrawFilled);
+
+	// Calculate thumb
+	float maxScroll = getMaxScrollOffset();
+	if (maxScroll <= 0) return;
+
+	float totalHeight = filteredPresets_.size() * itemHeight_;
+	float visibleRatio = rect.getHeight() / totalHeight;
+	float thumbHeight = std::max(20.0f, rect.getHeight() * visibleRatio);
+
+	float scrollRatio = scrollOffset_ / maxScroll;
+	float thumbTop = rect.top + scrollRatio * (rect.getHeight() - thumbHeight);
+
+	VSTGUI::CRect thumbRect(rect.left + 2, thumbTop, rect.right - 2, thumbTop + thumbHeight);
+
+	// Thumb
+	context->setFillColor(isDraggingScrollbar_ ? VSTGUI::CColor(100, 100, 100) : VSTGUI::CColor(80, 80, 80));
+	context->drawRect(thumbRect, VSTGUI::kDrawFilled);
 }
 
 //------------------------------------------------------------------------

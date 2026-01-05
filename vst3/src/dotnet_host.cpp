@@ -86,6 +86,7 @@ bool DotNetHost::initialize(const char* libraryPath) {
 	getSampleCountFunc_ = loadFunction<GetSampleCountFunc>("spc_get_sample_count");
 	getSamplePcmDataFunc_ = loadFunction<GetSamplePcmDataFunc>("spc_get_sample_pcm");
 	getSampleInfoFunc_ = loadFunction<GetSampleInfoFunc>("spc_get_sample_info");
+	getWaveformFunc_ = loadFunction<GetWaveformFunc>("spc_get_waveform");
 
 	// At minimum we need create, destroy, and process
 	if (!createEngineFunc_ || !destroyEngineFunc_ || !processFunc_) {
@@ -150,6 +151,7 @@ void DotNetHost::shutdown() {
 	getSampleCountFunc_ = nullptr;
 	getSamplePcmDataFunc_ = nullptr;
 	getSampleInfoFunc_ = nullptr;
+	getWaveformFunc_ = nullptr;
 }
 
 // === Engine Lifecycle ===
@@ -456,6 +458,13 @@ int DotNetHost::getSamplePcmData(intptr_t engine, int sourceNumber, int16_t* buf
 int DotNetHost::getSampleInfo(intptr_t engine, int sourceNumber, int* startAddr, int* loopAddr, int* hasLoop) {
 	if (getSampleInfoFunc_ && engine) {
 		return getSampleInfoFunc_(engine, sourceNumber, startAddr, loopAddr, hasLoop);
+	}
+	return 0;
+}
+
+int DotNetHost::getWaveform(intptr_t engine, float* leftBuffer, float* rightBuffer, int maxSamples) {
+	if (getWaveformFunc_ && engine && leftBuffer && rightBuffer) {
+		return getWaveformFunc_(engine, leftBuffer, rightBuffer, maxSamples);
 	}
 	return 0;
 }

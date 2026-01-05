@@ -16,6 +16,13 @@ public sealed class SpcEngine : IDisposable {
 	private int _sampleRate;
 	private bool _disposed;
 
+	// Waveform capture for visualization
+	private readonly float[] _waveformLeft;
+	private readonly float[] _waveformRight;
+	private int _waveformWriteIndex;
+	private readonly object _waveformLock = new();
+	private const int WaveformBufferSize = 4096;
+
 	// Voice control for Ableton automation
 	private readonly bool[] _voiceMuted = new bool[8];
 	private readonly bool[] _voiceSolo = new bool[8];
@@ -89,6 +96,8 @@ public sealed class SpcEngine : IDisposable {
 		Editor = new SpcEditor();
 		_ramBuffer = new byte[0x10000];
 		_outputBuffer = new float[8192];
+		_waveformLeft = new float[WaveformBufferSize];
+		_waveformRight = new float[WaveformBufferSize];
 		_sampleRate = sampleRate;
 
 		// Connect CPU and DSP
@@ -321,7 +330,41 @@ public sealed class SpcEngine : IDisposable {
 			output[i] *= MasterVolume;
 		}
 
+		// Capture waveform for visualization
+		CaptureWaveform(output, sampleCount);
+
 		Position += sampleCount;
+	}
+
+	private void CaptureWaveform(ReadOnlySpan<float> samples, int sampleCount) {
+		lock (_waveformLock) {
+			for (int i = 0; i < sampleCount; i++) {
+				_waveformLeft[_waveformWriteIndex] = samples[i * 2];
+				_waveformRight[_waveformWriteIndex] = samples[i * 2 + 1];
+				_waveformWriteIndex = (_waveformWriteIndex + 1) % WaveformBufferSize;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Gets the current waveform data for visualization.
+	/// </summary>
+	/// <param name="left">Buffer for left channel samples.</param>
+	/// <param name="right">Buffer for right channel samples.</param>
+	/// <param name="maxSamples">Maximum samples to copy.</param>
+	/// <returns>Number of samples copied.</returns>
+	public int GetWaveform(Span<float> left, Span<float> right, int maxSamples) {
+		lock (_waveformLock) {
+			int count = Math.Min(maxSamples, WaveformBufferSize);
+			int readIndex = (_waveformWriteIndex - count + WaveformBufferSize) % WaveformBufferSize;
+
+			for (int i = 0; i < count; i++) {
+				if (i < left.Length) left[i] = _waveformLeft[(readIndex + i) % WaveformBufferSize];
+				if (i < right.Length) right[i] = _waveformRight[(readIndex + i) % WaveformBufferSize];
+			}
+
+			return count;
+		}
 	}
 
 	private void GenerateNative(Span<float> output, int sampleCount) {

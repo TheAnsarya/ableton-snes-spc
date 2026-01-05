@@ -71,6 +71,8 @@ if(SMTG_ENABLE_VSTGUI_SUPPORT)
 		src/gui/waveform_view.h
 		src/gui/preset_browser.cpp
 		src/gui/preset_browser.h
+		src/gui/spectrum_view.cpp
+		src/gui/spectrum_view.h
 	)
 endif()
 

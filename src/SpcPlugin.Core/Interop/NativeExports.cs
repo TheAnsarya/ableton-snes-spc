@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using SpcPlugin.Core.Audio;
 using SpcPlugin.Core.Midi;
+using SpcPlugin.Core.RealTime;
 
 namespace SpcPlugin.Core.Interop;
 
@@ -12,6 +13,7 @@ public static unsafe class NativeExports {
 	// Engine instance registry (GCHandle to prevent collection)
 	private static readonly Dictionary<nint, GCHandle> _engines = [];
 	private static readonly Dictionary<nint, MidiProcessor> _midiProcessors = [];
+	private static readonly Dictionary<nint, RealtimeSampleEditor> _sampleEditors = [];
 	private static int _nextId = 1;
 
 	#region Engine Lifecycle
@@ -28,6 +30,7 @@ public static unsafe class NativeExports {
 			nint id = _nextId++;
 			_engines[id] = handle;
 			_midiProcessors[id] = new MidiProcessor(engine);
+			_sampleEditors[id] = new RealtimeSampleEditor(engine);
 			return id;
 		} catch {
 			return 0;
@@ -47,6 +50,7 @@ public static unsafe class NativeExports {
 			handle.Free();
 			_engines.Remove(engineId);
 			_midiProcessors.Remove(engineId);
+			_sampleEditors.Remove(engineId);
 		}
 	}
 
@@ -331,6 +335,132 @@ public static unsafe class NativeExports {
 		}
 
 		return null;
+	}
+
+	private static RealtimeSampleEditor? GetSampleEditor(nint engineId) {
+		return _sampleEditors.GetValueOrDefault(engineId);
+	}
+
+	#endregion
+
+	#region Sample Editing
+
+	/// <summary>
+	/// Trigger a sample on a specific voice.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_trigger_sample")]
+	public static void TriggerSample(nint engineId, int voice, int sourceNumber) {
+		GetSampleEditor(engineId)?.TriggerSample(voice, sourceNumber);
+	}
+
+	/// <summary>
+	/// Stop a voice.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_stop_voice")]
+	public static void StopVoice(nint engineId, int voice) {
+		GetSampleEditor(engineId)?.StopVoice(voice);
+	}
+
+	/// <summary>
+	/// Set the pitch multiplier for a voice.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_set_sample_pitch")]
+	public static void SetSamplePitch(nint engineId, int voice, float pitchMultiplier) {
+		GetSampleEditor(engineId)?.SetSamplePitch(voice, pitchMultiplier);
+	}
+
+	/// <summary>
+	/// Set the volume for a voice (stereo).
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_set_sample_volume")]
+	public static void SetSampleVolume(nint engineId, int voice, float left, float right) {
+		GetSampleEditor(engineId)?.SetSampleVolume(voice, left, right);
+	}
+
+	/// <summary>
+	/// Set the ADSR envelope for a voice.
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_set_sample_envelope")]
+	public static void SetSampleEnvelope(nint engineId, int voice, int attack, int decay, int sustain, int release) {
+		GetSampleEditor(engineId)?.SetEnvelope(voice, attack, decay, sustain, release);
+	}
+
+	/// <summary>
+	/// Get the number of samples in the directory (up to 256).
+	/// </summary>
+	[UnmanagedCallersOnly(EntryPoint = "spc_get_sample_count")]
+	public static int GetSampleCount(nint engineId) {
+		var editor = GetSampleEditor(engineId)?.Editor;
+		if (editor == null) return 0;
+
+		// Count non-zero sample directory entries
+		int count = 0;
+		for (int i = 0; i < 256; i++) {
+			var info = editor.GetSampleInfo(i);
+			if (info.StartAddress != 0) count++;
+		}
+
+		return count;
+	}
+
+	/// <summary>
+	/// Get decoded PCM data for a sample.
+	/// </summary>
+	/// <returns>Number of samples written.</returns>
+	[UnmanagedCallersOnly(EntryPoint = "spc_get_sample_pcm")]
+	public static int GetSamplePcm(nint engineId, int sourceNumber, short* buffer, int maxSamples) {
+		var editor = GetSampleEditor(engineId);
+		if (editor == null || buffer == null) return 0;
+
+		try {
+			var pcm = editor.GetSamplePcm(sourceNumber);
+			int toCopy = Math.Min(pcm.Length, maxSamples);
+			for (int i = 0; i < toCopy; i++) {
+				buffer[i] = pcm[i];
+			}
+
+			return toCopy;
+		} catch {
+			return 0;
+		}
+	}
+
+	/// <summary>
+	/// Get sample info (address, loop).
+	/// </summary>
+	/// <returns>1 on success, 0 on failure.</returns>
+	[UnmanagedCallersOnly(EntryPoint = "spc_get_sample_info")]
+	public static int GetSampleInfo(nint engineId, int sourceNumber, int* startAddr, int* loopAddr, int* hasLoop) {
+		var editor = GetSampleEditor(engineId)?.Editor;
+		if (editor == null) return 0;
+
+		try {
+			var info = editor.GetSampleInfo(sourceNumber);
+			if (startAddr != null) *startAddr = info.StartAddress;
+			if (loopAddr != null) *loopAddr = info.LoopAddress;
+			if (hasLoop != null) *hasLoop = info.HasLoop ? 1 : 0;
+			return 1;
+		} catch {
+			return 0;
+		}
+	}
+
+	/// <summary>
+	/// Get the raw waveform data for display (current output buffer).
+	/// </summary>
+	/// <returns>Number of samples written per channel.</returns>
+	[UnmanagedCallersOnly(EntryPoint = "spc_get_waveform")]
+	public static int GetWaveform(nint engineId, float* leftBuffer, float* rightBuffer, int maxSamples) {
+		var engine = GetEngine(engineId);
+		if (engine == null || leftBuffer == null || rightBuffer == null) return 0;
+
+		try {
+			Span<float> left = new(leftBuffer, maxSamples);
+			Span<float> right = new(rightBuffer, maxSamples);
+			return engine.GetWaveform(left, right, maxSamples);
+		} catch {
+			return 0;
+		}
 	}
 
 	#endregion

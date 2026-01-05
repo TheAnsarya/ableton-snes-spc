@@ -3,6 +3,7 @@
 #include "vstgui/lib/cview.h"
 #include "vstgui/lib/cviewcontainer.h"
 #include "vstgui/lib/controls/clistcontrol.h"
+#include "vstgui/lib/controls/cscrollbar.h"
 #include "../spc_controller.h"
 #include <vector>
 #include <string>
@@ -62,6 +63,8 @@ public:
 	// Favorites
 	void toggleFavorite(size_t index);
 	std::vector<PresetInfo> getFavorites() const;
+	void saveFavorites(const std::string& path);
+	void loadFavorites(const std::string& path);
 
 	// Paths
 	void addSearchPath(const std::string& path);
@@ -73,6 +76,8 @@ public:
 protected:
 	void draw(VSTGUI::CDrawContext* context) override;
 	VSTGUI::CMouseEventResult onMouseDown(VSTGUI::CPoint& where, const VSTGUI::CButtonState& buttons) override;
+	VSTGUI::CMouseEventResult onMouseMoved(VSTGUI::CPoint& where, const VSTGUI::CButtonState& buttons) override;
+	bool onWheel(const VSTGUI::CPoint& where, const VSTGUI::CMouseWheelAxis& axis, const float& distance, const VSTGUI::CButtonState& buttons) override;
 
 private:
 	SpcController* controller_ = nullptr;
@@ -85,13 +90,19 @@ private:
 	size_t selectedIndex_ = SIZE_MAX;
 	float scrollOffset_ = 0.0f;
 	float itemHeight_ = 24.0f;
+	float scrollbarWidth_ = 12.0f;
+	bool isDraggingScrollbar_ = false;
 
 	SelectionCallback selectionCallback_;
 	LoadCallback loadCallback_;
 
 	void applyFilter();
 	void drawPresetItem(VSTGUI::CDrawContext* context, const VSTGUI::CRect& rect, const PresetInfo& preset, bool selected);
+	void drawScrollbar(VSTGUI::CDrawContext* context, const VSTGUI::CRect& rect);
 	size_t hitTest(const VSTGUI::CPoint& point);
+	bool hitTestScrollbar(const VSTGUI::CPoint& point);
+	float getMaxScrollOffset() const;
+	void clampScrollOffset();
 };
 
 //------------------------------------------------------------------------
