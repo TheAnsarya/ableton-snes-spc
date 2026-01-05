@@ -18,7 +18,7 @@ SPCX (SPC Extended) is a project file format for the Ableton SNES SPC Plugin. It
 
 SPCX files are ZIP archives with a specific internal structure:
 
-```
+```text
 myproject.spcx (ZIP archive)
 ├── manifest.json           # Project metadata and version
 ├── spc/
@@ -77,9 +77,11 @@ myproject.spcx (ZIP archive)
 ## SPC Data
 
 ### ram.bin
+
 Raw 65,536 bytes of SPC700 RAM exactly as it would appear in an SPC file.
 
 ### dsp.bin
+
 Raw 128 bytes of DSP registers.
 
 ### spc/metadata.json

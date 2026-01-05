@@ -73,7 +73,7 @@ The VST3 plugin consists of:
 
 ### Data Flow
 
-```
+```text
 DAW -> VST3 Plugin (C++) -> .NET Host -> SpcEngine -> SPC700 + DSP -> Audio Output
 ```
 
