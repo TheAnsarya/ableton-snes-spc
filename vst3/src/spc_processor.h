@@ -78,6 +78,9 @@ private:
 
 	// Process MIDI events
 	void processMidiEvents(Steinberg::Vst::IEventList* events);
+
+	// Forward MIDI CC to controller for MIDI learn
+	void forwardMidiCCToController(int channel, int ccNumber, int value);
 };
 
 } // namespace SnesSpc

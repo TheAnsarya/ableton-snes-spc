@@ -546,6 +546,12 @@ void SpcProcessor::processMidiEvents(Steinberg::Vst::IEventList* events) {
 						event.midiCCOut.controlNumber,
 						event.midiCCOut.value
 					);
+					// Forward CC to controller for MIDI learn
+					forwardMidiCCToController(
+						event.midiCCOut.channel,
+						event.midiCCOut.controlNumber,
+						event.midiCCOut.value
+					);
 					break;
 
 				case Steinberg::Vst::Event::kPolyPressureEvent:
@@ -579,6 +585,18 @@ void SpcProcessor::updateSampleEnvelope() {
 	uint16_t adsrPacked = (adsr1 << 8) | adsr2;
 
 	dotnetHost_->setSampleEnvelope(engineHandle_, 0, adsrPacked);
+}
+
+void SpcProcessor::forwardMidiCCToController(int channel, int ccNumber, int value) {
+	// Send MIDI CC message to controller for MIDI learn functionality
+	if (auto* msg = allocateMessage()) {
+		msg->setMessageID(kMsgMidiCC);
+		msg->getAttributes()->setInt(kAttrMidiChannel, channel);
+		msg->getAttributes()->setInt(kAttrMidiCCNumber, ccNumber);
+		msg->getAttributes()->setInt(kAttrMidiCCValue, value);
+		sendMessage(msg);
+		msg->release();
+	}
 }
 
 } // namespace SnesSpc

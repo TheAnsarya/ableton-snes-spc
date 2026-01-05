@@ -286,6 +286,17 @@ Steinberg::tresult PLUGIN_API SpcController::notify(Steinberg::Vst::IMessage* me
 		return Steinberg::kResultOk;
 	}
 
+	if (strcmp(msgId, kMsgMidiCC) == 0) {
+		// Receive MIDI CC from processor for MIDI learn
+		Steinberg::int64 channel = 0, ccNumber = 0, value = 0;
+		if (message->getAttributes()->getInt(kAttrMidiChannel, channel) == Steinberg::kResultOk &&
+			message->getAttributes()->getInt(kAttrMidiCCNumber, ccNumber) == Steinberg::kResultOk &&
+			message->getAttributes()->getInt(kAttrMidiCCValue, value) == Steinberg::kResultOk) {
+			processMidiCC(static_cast<int>(channel), static_cast<int>(ccNumber), static_cast<int>(value));
+		}
+		return Steinberg::kResultOk;
+	}
+
 	return EditController::notify(message);
 }
 

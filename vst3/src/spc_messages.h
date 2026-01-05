@@ -12,6 +12,7 @@ static const char* kMsgSpcLoaded = "SpcLoaded";
 static const char* kMsgSpcError = "SpcError";
 static const char* kMsgWaveformData = "WaveformData";
 static const char* kMsgRequestWaveform = "RequestWaveform";
+static const char* kMsgMidiCC = "MidiCC";
 
 // Attribute keys for messages
 static const char* kAttrFilePath = "FilePath";
@@ -24,5 +25,8 @@ static const char* kAttrDuration = "Duration";
 static const char* kAttrWaveformLeft = "WaveformLeft";
 static const char* kAttrWaveformRight = "WaveformRight";
 static const char* kAttrWaveformSamples = "WaveformSamples";
+static const char* kAttrMidiChannel = "MidiChannel";
+static const char* kAttrMidiCCNumber = "MidiCCNumber";
+static const char* kAttrMidiCCValue = "MidiCCValue";
 
 } // namespace SnesSpc

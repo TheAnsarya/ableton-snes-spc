@@ -4,6 +4,7 @@
 #include "keyboard_handler.h"
 #include "preset_browser.h"
 #include "view_switcher.h"
+#include "../spc_params.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -29,9 +30,10 @@ bool SpcEditor::open(void* parent, const VSTGUI::PlatformType& platformType) {
 	bool result = VST3Editor::open(parent, platformType);
 
 	if (result) {
-		// Find visualization views
+		// Find visualization views and panels
 		if (auto* frame = getFrame()) {
 			findVisualizationViews(frame);
+			findPanelViews(frame);
 
 			// Register keyboard handler
 			keyboardHandler_ = std::make_unique<KeyboardHandler>(controller_);
@@ -47,6 +49,9 @@ bool SpcEditor::open(void* parent, const VSTGUI::PlatformType& platformType) {
 			16 // ~60 FPS
 		);
 		updateTimer_->start();
+
+		// Set initial panel visibility based on ViewMode parameter
+		updatePanelVisibility();
 	}
 
 	return result;
@@ -69,6 +74,9 @@ void SpcEditor::close() {
 	spectrumView_ = nullptr;
 	presetBrowser_ = nullptr;
 	viewSwitcher_ = nullptr;
+	mixerPanel_ = nullptr;
+	samplesPanel_ = nullptr;
+	browserPanel_ = nullptr;
 	VST3Editor::close();
 }
 
@@ -98,6 +106,56 @@ void SpcEditor::findVisualizationViews(VSTGUI::CViewContainer* container) {
 			findVisualizationViews(container);
 		}
 	});
+}
+
+//------------------------------------------------------------------------
+void SpcEditor::findPanelViews(VSTGUI::CViewContainer* container) {
+	if (!container) return;
+
+	container->forEachChild([this](VSTGUI::CView* child) {
+		// Check for custom view names to identify panels
+		if (auto* viewContainer = dynamic_cast<VSTGUI::CViewContainer*>(child)) {
+			auto viewName = viewContainer->getAttributeID();
+			if (viewName) {
+				std::string name(viewName);
+				if (name == "MixerPanel") {
+					mixerPanel_ = viewContainer;
+				} else if (name == "SamplesPanel") {
+					samplesPanel_ = viewContainer;
+				} else if (name == "BrowserPanel") {
+					browserPanel_ = viewContainer;
+				}
+			}
+			// Recursively search containers
+			findPanelViews(viewContainer);
+		}
+	});
+}
+
+//------------------------------------------------------------------------
+void SpcEditor::updatePanelVisibility() {
+	// Get current view mode from parameter
+	int viewMode = 0;
+	if (controller_) {
+		auto value = controller_->getParamNormalized(kParamViewMode);
+		viewMode = static_cast<int>(value * 2 + 0.5); // 0, 1, or 2
+	}
+
+	// Set visibility based on view mode
+	if (mixerPanel_) {
+		mixerPanel_->setVisible(viewMode == 0);
+	}
+	if (samplesPanel_) {
+		samplesPanel_->setVisible(viewMode == 1);
+	}
+	if (browserPanel_) {
+		browserPanel_->setVisible(viewMode == 2);
+	}
+
+	// Invalidate the frame to redraw
+	if (auto* frame = getFrame()) {
+		frame->invalid();
+	}
 }
 
 //------------------------------------------------------------------------

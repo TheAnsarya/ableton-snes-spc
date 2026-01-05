@@ -28,6 +28,9 @@ public:
 	void onDragLeave(VSTGUI::IDataPackage* drag, const VSTGUI::CPoint& where) override;
 	VSTGUI::DragOperation onDragMove(VSTGUI::IDataPackage* drag, const VSTGUI::CPoint& where) override;
 
+	// Called when ViewMode parameter changes
+	void updatePanelVisibility();
+
 protected:
 	// UI creation
 	bool open(void* parent, const VSTGUI::PlatformType& platformType) override;
@@ -43,6 +46,11 @@ private:
 	PresetBrowser* presetBrowser_ = nullptr;
 	ViewSwitcher* viewSwitcher_ = nullptr;
 
+	// Switchable panels (found by custom-view-name)
+	VSTGUI::CViewContainer* mixerPanel_ = nullptr;
+	VSTGUI::CViewContainer* samplesPanel_ = nullptr;
+	VSTGUI::CViewContainer* browserPanel_ = nullptr;
+
 	// Timer for updating visualizations
 	VSTGUI::SharedPointer<VSTGUI::CVSTGUITimer> updateTimer_;
 
@@ -54,6 +62,9 @@ private:
 
 	// Find visualization views in the UI hierarchy
 	void findVisualizationViews(VSTGUI::CViewContainer* container);
+
+	// Find panel views by custom-view-name
+	void findPanelViews(VSTGUI::CViewContainer* container);
 
 	// Initialize preset browser with default paths
 	void initializePresetBrowser();
