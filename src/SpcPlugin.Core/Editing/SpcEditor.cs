@@ -344,6 +344,19 @@ public sealed class SpcEditor {
 	public int SampleDirectoryAddress => _dspRegisters[0x5d] << 8;
 
 	/// <summary>
+	/// Gets the sample directory page (alias for VST UI).
+	/// </summary>
+	public int SampleDirectory => SampleDirectoryAddress;
+
+	/// <summary>
+	/// Gets/sets the FIR filter coefficients.
+	/// </summary>
+	public sbyte[] EchoFir {
+		get => GetFirCoefficients();
+		set => SetFirCoefficients(value);
+	}
+
+	/// <summary>
 	/// Gets information about a sample from the directory.
 	/// </summary>
 	public SampleInfo GetSampleInfo(int sourceNumber) {
@@ -353,13 +366,55 @@ public sealed class SpcEditor {
 
 		int dirAddr = SampleDirectoryAddress + (sourceNumber << 2);
 		if (dirAddr + 3 >= _ram.Length) {
-			return new SampleInfo { StartAddress = 0, LoopAddress = 0 };
+			return new SampleInfo { StartAddress = 0, LoopAddress = 0, Length = 0 };
 		}
 
+		ushort startAddress = (ushort)(_ram[dirAddr] | (_ram[dirAddr + 1] << 8));
+		ushort loopAddress = (ushort)(_ram[dirAddr + 2] | (_ram[dirAddr + 3] << 8));
+
+		// Calculate length by finding end block
+		int length = CalculateBrrLength(startAddress);
+
 		return new SampleInfo {
-			StartAddress = (ushort)(_ram[dirAddr] | (_ram[dirAddr + 1] << 8)),
-			LoopAddress = (ushort)(_ram[dirAddr + 2] | (_ram[dirAddr + 3] << 8)),
+			StartAddress = startAddress,
+			LoopAddress = loopAddress,
+			Length = length
 		};
+	}
+
+	/// <summary>
+	/// Calculates the length of BRR data by finding the end block.
+	/// </summary>
+	private int CalculateBrrLength(int startAddress) {
+		int addr = startAddress;
+		int length = 0;
+		int maxBlocks = 0x10000 / 9;
+
+		for (int block = 0; block < maxBlocks && addr + 9 <= _ram.Length; block++) {
+			byte header = _ram[addr];
+			length += 9;
+
+			if ((header & 0x01) != 0) { // End flag
+				break;
+			}
+			addr += 9;
+		}
+
+		return length;
+	}
+
+	/// <summary>
+	/// Gets the raw BRR data for a sample.
+	/// </summary>
+	public byte[] GetSampleBrr(int sourceNumber) {
+		var info = GetSampleInfo(sourceNumber);
+		if (info.Length == 0 || info.StartAddress + info.Length > _ram.Length) {
+			return [];
+		}
+
+		var result = new byte[info.Length];
+		_ram.AsSpan(info.StartAddress, info.Length).CopyTo(result);
+		return result;
 	}
 
 	/// <summary>
@@ -632,11 +687,12 @@ public readonly struct VoiceInfo {
 public readonly struct SampleInfo {
 	public ushort StartAddress { get; init; }
 	public ushort LoopAddress { get; init; }
+	public int Length { get; init; }
 
 	/// <summary>
 	/// Gets whether the sample has a loop point different from start.
 	/// </summary>
-	public bool HasLoop => LoopAddress != StartAddress;
+	public bool HasLoop => LoopAddress != StartAddress && LoopAddress >= StartAddress;
 }
 
 /// <summary>

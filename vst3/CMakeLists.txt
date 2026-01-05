@@ -8,6 +8,10 @@ project(SnesSpcVst3
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Build configuration option
+option(USE_NATIVE_AOT "Use Native AOT compiled .NET library" OFF)
+option(BUILD_TESTS "Build unit tests" OFF)
+
 # Find VST3 SDK
 # Set VST3_SDK_ROOT to the path of your VST3 SDK installation
 if(NOT DEFINED VST3_SDK_ROOT)
@@ -18,14 +22,27 @@ if(NOT DEFINED VST3_SDK_ROOT)
 	endif()
 endif()
 
+message(STATUS "VST3 SDK Root: ${VST3_SDK_ROOT}")
+
 # Include VST3 SDK
 list(APPEND CMAKE_MODULE_PATH "${VST3_SDK_ROOT}/cmake/modules")
 include(SMTG_VST3_SDK)
 
-# Find .NET runtime for hosting
-find_package(PkgConfig)
-if(PkgConfig_FOUND)
-	pkg_check_modules(NETHOST IMPORTED_TARGET nethost)
+# Define paths based on Native AOT setting
+if(USE_NATIVE_AOT)
+	message(STATUS "Using Native AOT compiled library")
+	set(DOTNET_LIB_DIR "${CMAKE_SOURCE_DIR}/../src/SpcPlugin.Core/bin/Release/net10.0/publish")
+	if(WIN32)
+		set(DOTNET_LIB_NAME "SpcPlugin.Core.dll")
+	else()
+		set(DOTNET_LIB_NAME "libSpcPlugin.Core.so")
+	endif()
+	add_compile_definitions(USE_NATIVE_AOT=1)
+else()
+	message(STATUS "Using standard .NET runtime hosting")
+	set(DOTNET_LIB_DIR "${CMAKE_SOURCE_DIR}/../src/SpcPlugin.Core/bin/Release/net10.0")
+	set(DOTNET_LIB_NAME "SpcPlugin.Core.dll")
+	add_compile_definitions(USE_NATIVE_AOT=0)
 endif()
 
 # Plugin sources
@@ -46,6 +63,12 @@ smtg_add_vst3plugin(${PROJECT_NAME}
 	${PLUGIN_SOURCES}
 )
 
+# Include directories
+target_include_directories(${PROJECT_NAME}
+	PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
 # Link libraries
 target_link_libraries(${PROJECT_NAME}
 	PRIVATE
@@ -56,12 +79,43 @@ target_link_libraries(${PROJECT_NAME}
 		pluginterfaces
 )
 
-# Windows-specific settings
+# Platform-specific settings
 if(WIN32)
 	target_compile_definitions(${PROJECT_NAME}
 		PRIVATE
 			UNICODE
 			_UNICODE
+			WIN32_LEAN_AND_MEAN
+			NOMINMAX
+	)
+
+	# Link Windows libraries for dynamic loading
+	target_link_libraries(${PROJECT_NAME}
+		PRIVATE
+			kernel32
+	)
+elseif(APPLE)
+	target_compile_definitions(${PROJECT_NAME}
+		PRIVATE
+			__MACOSX__
+	)
+
+	# Link macOS frameworks
+	find_library(COREFOUNDATION_LIBRARY CoreFoundation)
+	target_link_libraries(${PROJECT_NAME}
+		PRIVATE
+			${COREFOUNDATION_LIBRARY}
+	)
+elseif(UNIX)
+	target_compile_definitions(${PROJECT_NAME}
+		PRIVATE
+			__linux__
+	)
+
+	# Link dl for dlopen
+	target_link_libraries(${PROJECT_NAME}
+		PRIVATE
+			dl
 	)
 endif()
 
@@ -72,10 +126,32 @@ smtg_target_configure_version_file(${PROJECT_NAME})
 # Copy .NET assembly to output directory
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${CMAKE_SOURCE_DIR}/../src/SpcPlugin.Core/bin/Release/net10.0/SpcPlugin.Core.dll"
+		"${DOTNET_LIB_DIR}/${DOTNET_LIB_NAME}"
 		"$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-	COMMENT "Copying .NET assembly to output directory"
+	COMMENT "Copying .NET library to output directory"
 )
+
+# For Native AOT, also copy any dependent native libraries
+if(USE_NATIVE_AOT)
+	if(WIN32)
+		# Copy vcruntime if present
+		file(GLOB NATIVE_DEPS "${DOTNET_LIB_DIR}/*.dll")
+		foreach(DEP ${NATIVE_DEPS})
+			add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					"${DEP}"
+					"$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+				COMMENT "Copying native dependency: ${DEP}"
+			)
+		endforeach()
+	endif()
+endif()
 
 # Installation
 smtg_target_install(${PROJECT_NAME})
+
+# Verbose output for debugging
+message(STATUS "Plugin Name: ${PROJECT_NAME}")
+message(STATUS ".NET Library Directory: ${DOTNET_LIB_DIR}")
+message(STATUS ".NET Library Name: ${DOTNET_LIB_NAME}")
+

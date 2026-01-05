@@ -9,6 +9,36 @@ public static class BrrCodec {
 	private const int BytesPerBlock = 9;
 
 	/// <summary>
+	/// Decodes complete BRR data into PCM samples.
+	/// </summary>
+	/// <param name="brrData">BRR encoded data (must be multiple of 9 bytes).</param>
+	/// <returns>Decoded 16-bit PCM samples.</returns>
+	public static short[] Decode(byte[] brrData) {
+		if (brrData.Length == 0) return [];
+		if (brrData.Length % BytesPerBlock != 0) {
+			throw new ArgumentException("BRR data must be a multiple of 9 bytes", nameof(brrData));
+		}
+
+		int blockCount = brrData.Length / BytesPerBlock;
+		var samples = new short[blockCount * SamplesPerBlock];
+		short prev1 = 0, prev2 = 0;
+
+		for (int block = 0; block < blockCount; block++) {
+			var blockData = brrData.AsSpan(block * BytesPerBlock, BytesPerBlock);
+			var output = samples.AsSpan(block * SamplesPerBlock, SamplesPerBlock);
+			DecodeBlock(blockData, output, ref prev1, ref prev2);
+
+			// Check for end flag
+			if ((blockData[0] & 0x01) != 0) {
+				// Return only the samples up to and including this block
+				return samples.AsSpan(0, (block + 1) * SamplesPerBlock).ToArray();
+			}
+		}
+
+		return samples;
+	}
+
+	/// <summary>
 	/// Decodes a BRR block into 16 PCM samples.
 	/// </summary>
 	/// <param name="brrBlock">9-byte BRR block.</param>
