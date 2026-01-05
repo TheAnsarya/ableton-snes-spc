@@ -43,6 +43,7 @@ public static unsafe class NativeExports {
 			if (handle.Target is SpcEngine engine) {
 				engine.Dispose();
 			}
+
 			handle.Free();
 			_engines.Remove(engineId);
 			_midiProcessors.Remove(engineId);
@@ -328,6 +329,7 @@ public static unsafe class NativeExports {
 		if (_engines.TryGetValue(engineId, out var handle)) {
 			return handle.Target as SpcEngine;
 		}
+
 		return null;
 	}
 

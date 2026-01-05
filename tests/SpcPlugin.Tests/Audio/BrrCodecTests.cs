@@ -1,7 +1,7 @@
-namespace SpcPlugin.Tests.Audio;
 
 using SpcPlugin.Core.Audio;
 
+namespace SpcPlugin.Tests.Audio;
 public class BrrCodecTests {
 	[Fact]
 	public void DecodeBlock_WithZeroShift_DecodesCorrectly() {

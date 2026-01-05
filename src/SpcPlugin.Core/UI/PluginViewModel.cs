@@ -12,25 +12,14 @@ namespace SpcPlugin.Core.UI;
 /// Implements INotifyPropertyChanged for data binding in UI frameworks.
 /// </summary>
 public class PluginViewModel : INotifyPropertyChanged, IDisposable {
-	private readonly SpcEngine _engine;
-	private readonly MidiProcessor _midiProcessor;
-	private readonly PresetManager _presetManager;
-
-	private string _spcFilePath = "";
-	private string _songTitle = "";
-	private string _gameTitle = "";
-	private string _artist = "";
-	private bool _isLoaded;
-	private int _selectedVoice;
-	private int _selectedPresetIndex;
 	private List<SpcPreset> _presets = [];
 
 	public event PropertyChangedEventHandler? PropertyChanged;
 
 	public PluginViewModel(SpcEngine engine) {
-		_engine = engine;
-		_midiProcessor = new MidiProcessor(engine);
-		_presetManager = new PresetManager(engine, _midiProcessor);
+		Engine = engine;
+		MidiProcessor = new MidiProcessor(engine);
+		PresetManager = new PresetManager(engine, MidiProcessor);
 
 		// Initialize voice view models
 		for (int i = 0; i < 8; i++) {
@@ -46,66 +35,51 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// <summary>
 	/// The underlying SPC engine.
 	/// </summary>
-	public SpcEngine Engine => _engine;
+	public SpcEngine Engine { get; }
 
 	/// <summary>
 	/// The MIDI processor.
 	/// </summary>
-	public MidiProcessor MidiProcessor => _midiProcessor;
+	public MidiProcessor MidiProcessor { get; }
 
 	/// <summary>
 	/// The preset manager.
 	/// </summary>
-	public PresetManager PresetManager => _presetManager;
+	public PresetManager PresetManager { get; }
 
 	/// <summary>
 	/// Whether an SPC file is loaded.
 	/// </summary>
-	public bool IsLoaded {
-		get => _isLoaded;
-		private set => SetField(ref _isLoaded, value);
-	}
+	public bool IsLoaded { get; private set => SetField(ref field, value); }
 
 	/// <summary>
 	/// Path to the currently loaded SPC file.
 	/// </summary>
-	public string SpcFilePath {
-		get => _spcFilePath;
-		private set => SetField(ref _spcFilePath, value);
-	}
+	public string SpcFilePath { get; private set => SetField(ref field, value); } = "";
 
 	/// <summary>
 	/// Song title from ID666 tag.
 	/// </summary>
-	public string SongTitle {
-		get => _songTitle;
-		private set => SetField(ref _songTitle, value);
-	}
+	public string SongTitle { get; private set => SetField(ref field, value); } = "";
 
 	/// <summary>
 	/// Game title from ID666 tag.
 	/// </summary>
-	public string GameTitle {
-		get => _gameTitle;
-		private set => SetField(ref _gameTitle, value);
-	}
+	public string GameTitle { get; private set => SetField(ref field, value); } = "";
 
 	/// <summary>
 	/// Artist name from ID666 tag.
 	/// </summary>
-	public string Artist {
-		get => _artist;
-		private set => SetField(ref _artist, value);
-	}
+	public string Artist { get; private set => SetField(ref field, value); } = "";
 
 	/// <summary>
 	/// Whether playback is active.
 	/// </summary>
 	public bool IsPlaying {
-		get => _engine.IsPlaying;
+		get => Engine.IsPlaying;
 		set {
-			if (value) _engine.Play();
-			else _engine.Pause();
+			if (value) Engine.Play();
+			else Engine.Pause();
 			OnPropertyChanged();
 		}
 	}
@@ -114,9 +88,9 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Loop enable state.
 	/// </summary>
 	public bool LoopEnabled {
-		get => _engine.LoopEnabled;
+		get => Engine.LoopEnabled;
 		set {
-			_engine.LoopEnabled = value;
+			Engine.LoopEnabled = value;
 			OnPropertyChanged();
 		}
 	}
@@ -125,9 +99,9 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Master volume (0-200%).
 	/// </summary>
 	public float MasterVolume {
-		get => _engine.MasterVolume;
+		get => Engine.MasterVolume;
 		set {
-			_engine.MasterVolume = Math.Clamp(value, 0f, 2f);
+			Engine.MasterVolume = Math.Clamp(value, 0f, 2f);
 			OnPropertyChanged();
 			OnPropertyChanged(nameof(MasterVolumePercent));
 		}
@@ -141,7 +115,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// <summary>
 	/// Current playback position in seconds.
 	/// </summary>
-	public double PositionSeconds => _engine.PositionSeconds;
+	public double PositionSeconds => Engine.PositionSeconds;
 
 	/// <summary>
 	/// Position formatted as MM:SS.
@@ -156,20 +130,17 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// <summary>
 	/// Currently selected voice index (0-7).
 	/// </summary>
-	public int SelectedVoice {
-		get => _selectedVoice;
-		set {
+	public int SelectedVoice { get; set {
 			if (value >= 0 && value < 8) {
-				SetField(ref _selectedVoice, value);
+				SetField(ref field, value);
 				OnPropertyChanged(nameof(SelectedVoiceViewModel));
 			}
-		}
-	}
+		} }
 
 	/// <summary>
 	/// View model for the selected voice.
 	/// </summary>
-	public VoiceViewModel SelectedVoiceViewModel => Voices[_selectedVoice];
+	public VoiceViewModel SelectedVoiceViewModel => Voices[SelectedVoice];
 
 	/// <summary>
 	/// Voice view models for all 8 voices.
@@ -187,15 +158,12 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// <summary>
 	/// Selected preset index.
 	/// </summary>
-	public int SelectedPresetIndex {
-		get => _selectedPresetIndex;
-		set {
-			if (SetField(ref _selectedPresetIndex, value) && value >= 0 && value < _presets.Count) {
-				_presetManager.ApplyPreset(_presets[value]);
+	public int SelectedPresetIndex { get; set {
+			if (SetField(ref field, value) && value >= 0 && value < _presets.Count) {
+				PresetManager.ApplyPreset(_presets[value]);
 				RefreshAll();
 			}
-		}
-	}
+		} }
 
 	/// <summary>
 	/// DSP settings view model.
@@ -211,7 +179,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// </summary>
 	public void LoadSpc(string filePath) {
 		try {
-			_engine.LoadSpcFile(filePath);
+			Engine.LoadSpcFile(filePath);
 			SpcFilePath = filePath;
 			IsLoaded = true;
 
@@ -219,8 +187,8 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 			ParseMetadata();
 
 			// Initialize DSP view model
-			if (_engine.Editor != null) {
-				Dsp = new DspViewModel(_engine.Editor);
+			if (Engine.Editor != null) {
+				Dsp = new DspViewModel(Engine.Editor);
 			}
 
 			RefreshAll();
@@ -235,13 +203,13 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// </summary>
 	public void LoadSpcData(byte[] data) {
 		try {
-			_engine.LoadSpc(data);
+			Engine.LoadSpc(data);
 			SpcFilePath = "";
 			IsLoaded = true;
 			ParseMetadata();
 
-			if (_engine.Editor != null) {
-				Dsp = new DspViewModel(_engine.Editor);
+			if (Engine.Editor != null) {
+				Dsp = new DspViewModel(Engine.Editor);
 			}
 
 			RefreshAll();
@@ -265,7 +233,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Stop command.
 	/// </summary>
 	public void Stop() {
-		_engine.Stop();
+		Engine.Stop();
 		OnPropertyChanged(nameof(IsPlaying));
 		OnPropertyChanged(nameof(PositionSeconds));
 		OnPropertyChanged(nameof(PositionFormatted));
@@ -280,7 +248,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Seek to position.
 	/// </summary>
 	public void Seek(double seconds) {
-		_engine.Seek(seconds);
+		Engine.Seek(seconds);
 		OnPropertyChanged(nameof(PositionSeconds));
 		OnPropertyChanged(nameof(PositionFormatted));
 	}
@@ -289,7 +257,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Mute all voices.
 	/// </summary>
 	public void MuteAll() {
-		_engine.MuteAll();
+		Engine.MuteAll();
 		foreach (var v in Voices) v.Refresh();
 	}
 
@@ -297,7 +265,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Unmute all voices.
 	/// </summary>
 	public void UnmuteAll() {
-		_engine.UnmuteAll();
+		Engine.UnmuteAll();
 		foreach (var v in Voices) v.Refresh();
 	}
 
@@ -305,7 +273,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Clear all solo states.
 	/// </summary>
 	public void ClearSolo() {
-		_engine.ClearSolo();
+		Engine.ClearSolo();
 		foreach (var v in Voices) v.Refresh();
 	}
 
@@ -313,7 +281,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Saves the current state as a preset.
 	/// </summary>
 	public SpcPreset SaveAsPreset(string name) {
-		var preset = _presetManager.CaptureCurrentState(name);
+		var preset = PresetManager.CaptureCurrentState(name);
 		_presets.Add(preset);
 		OnPropertyChanged(nameof(Presets));
 		return preset;
@@ -323,10 +291,10 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	/// Export audio to WAV file.
 	/// </summary>
 	public void ExportToWav(string outputPath, double duration, double fadeOut = 2.0) {
-		if (_engine.Editor == null) return;
+		if (Engine.Editor == null) return;
 
 		// Get current state as SPC data
-		var spcData = _engine.Editor.ExportSpc();
+		var spcData = Engine.Editor.ExportSpc();
 		SpcExporter.ExportToWav(spcData, outputPath, duration, 44100, fadeOut);
 	}
 
@@ -341,9 +309,9 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 
 	private void ParseMetadata() {
 		// Read ID666 metadata from SPC
-		if (_engine.Editor == null) return;
+		if (Engine.Editor == null) return;
 
-		var ram = _engine.Editor.Ram;
+		var ram = Engine.Editor.Ram;
 		// ID666 is at offset 0x2E-0xAD in original SPC file
 		// We'd need to store the original header or re-read from file
 		SongTitle = "Unknown";
@@ -389,7 +357,7 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 	}
 
 	public void Dispose() {
-		_engine.Dispose();
+		Engine.Dispose();
 	}
 
 	#endregion
@@ -400,32 +368,31 @@ public class PluginViewModel : INotifyPropertyChanged, IDisposable {
 /// </summary>
 public class VoiceViewModel : INotifyPropertyChanged {
 	private readonly SpcEngine _engine;
-	private readonly int _voiceIndex;
 
 	public event PropertyChangedEventHandler? PropertyChanged;
 
 	public VoiceViewModel(SpcEngine engine, int voiceIndex) {
 		_engine = engine;
-		_voiceIndex = voiceIndex;
+		Index = voiceIndex;
 	}
 
 	/// <summary>
 	/// Voice index (0-7).
 	/// </summary>
-	public int Index => _voiceIndex;
+	public int Index { get; }
 
 	/// <summary>
 	/// Display name.
 	/// </summary>
-	public string Name => $"Voice {_voiceIndex + 1}";
+	public string Name => $"Voice {Index + 1}";
 
 	/// <summary>
 	/// Whether the voice is muted.
 	/// </summary>
 	public bool IsMuted {
-		get => _engine.GetVoiceMuted(_voiceIndex);
+		get => _engine.GetVoiceMuted(Index);
 		set {
-			_engine.SetVoiceMuted(_voiceIndex, value);
+			_engine.SetVoiceMuted(Index, value);
 			OnPropertyChanged();
 		}
 	}
@@ -434,9 +401,9 @@ public class VoiceViewModel : INotifyPropertyChanged {
 	/// Whether the voice is soloed.
 	/// </summary>
 	public bool IsSolo {
-		get => _engine.GetVoiceSolo(_voiceIndex);
+		get => _engine.GetVoiceSolo(Index);
 		set {
-			_engine.SetVoiceSolo(_voiceIndex, value);
+			_engine.SetVoiceSolo(Index, value);
 			OnPropertyChanged();
 		}
 	}
@@ -445,9 +412,9 @@ public class VoiceViewModel : INotifyPropertyChanged {
 	/// Voice volume (0-1).
 	/// </summary>
 	public float Volume {
-		get => _engine.GetVoiceVolume(_voiceIndex);
+		get => _engine.GetVoiceVolume(Index);
 		set {
-			_engine.SetVoiceVolume(_voiceIndex, Math.Clamp(value, 0f, 1f));
+			_engine.SetVoiceVolume(Index, Math.Clamp(value, 0f, 1f));
 			OnPropertyChanged();
 			OnPropertyChanged(nameof(VolumePercent));
 		}
@@ -464,7 +431,7 @@ public class VoiceViewModel : INotifyPropertyChanged {
 	public int SourceNumber {
 		get {
 			if (_engine.Editor == null) return 0;
-			return _engine.Editor.GetVoiceInfo(_voiceIndex).SourceNumber;
+			return _engine.Editor.GetVoiceInfo(Index).SourceNumber;
 		}
 	}
 
@@ -474,7 +441,7 @@ public class VoiceViewModel : INotifyPropertyChanged {
 	public int Pitch {
 		get {
 			if (_engine.Editor == null) return 0;
-			return _engine.Editor.GetVoiceInfo(_voiceIndex).Pitch;
+			return _engine.Editor.GetVoiceInfo(Index).Pitch;
 		}
 	}
 
@@ -484,7 +451,7 @@ public class VoiceViewModel : INotifyPropertyChanged {
 	public int EnvelopeLevel {
 		get {
 			if (_engine.Editor == null) return 0;
-			return _engine.Editor.GetVoiceInfo(_voiceIndex).EnvX;
+			return _engine.Editor.GetVoiceInfo(Index).EnvX;
 		}
 	}
 
@@ -534,8 +501,8 @@ public class DspViewModel : INotifyPropertyChanged {
 	public int MainVolumeLeft {
 		get => _editor.MainVolume.Left;
 		set {
-			var current = _editor.MainVolume;
-			_editor.MainVolume = ((sbyte)Math.Clamp(value, -128, 127), current.Right);
+			var (Left, Right) = _editor.MainVolume;
+			_editor.MainVolume = ((sbyte)Math.Clamp(value, -128, 127), Right);
 			OnPropertyChanged();
 		}
 	}
@@ -546,8 +513,8 @@ public class DspViewModel : INotifyPropertyChanged {
 	public int MainVolumeRight {
 		get => _editor.MainVolume.Right;
 		set {
-			var current = _editor.MainVolume;
-			_editor.MainVolume = (current.Left, (sbyte)Math.Clamp(value, -128, 127));
+			var (Left, Right) = _editor.MainVolume;
+			_editor.MainVolume = (Left, (sbyte)Math.Clamp(value, -128, 127));
 			OnPropertyChanged();
 		}
 	}
@@ -558,8 +525,8 @@ public class DspViewModel : INotifyPropertyChanged {
 	public int EchoVolumeLeft {
 		get => _editor.EchoVolume.Left;
 		set {
-			var current = _editor.EchoVolume;
-			_editor.EchoVolume = ((sbyte)Math.Clamp(value, -128, 127), current.Right);
+			var (Left, Right) = _editor.EchoVolume;
+			_editor.EchoVolume = ((sbyte)Math.Clamp(value, -128, 127), Right);
 			OnPropertyChanged();
 		}
 	}
@@ -570,8 +537,8 @@ public class DspViewModel : INotifyPropertyChanged {
 	public int EchoVolumeRight {
 		get => _editor.EchoVolume.Right;
 		set {
-			var current = _editor.EchoVolume;
-			_editor.EchoVolume = (current.Left, (sbyte)Math.Clamp(value, -128, 127));
+			var (Left, Right) = _editor.EchoVolume;
+			_editor.EchoVolume = (Left, (sbyte)Math.Clamp(value, -128, 127));
 			OnPropertyChanged();
 		}
 	}

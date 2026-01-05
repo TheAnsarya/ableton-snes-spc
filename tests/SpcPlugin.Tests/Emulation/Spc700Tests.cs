@@ -1,7 +1,7 @@
-namespace SpcPlugin.Tests.Emulation;
 
 using SpcPlugin.Core.Emulation;
 
+namespace SpcPlugin.Tests.Emulation;
 public class Spc700Tests {
 	private static Spc700 CreateCpuWithCode(params byte[] code) {
 		var cpu = new Spc700();
@@ -27,10 +27,11 @@ public class Spc700Tests {
 		// Set default PSW and SP
 		spcData[0x2a] = 0x00; // PSW
 		spcData[0x2b] = 0xef; // SP
-		// Copy code to RAM offset in SPC file
+							  // Copy code to RAM offset in SPC file
 		for (int i = 0; i < code.Length; i++) {
 			spcData[0x100 + pc + i] = code[i];
 		}
+
 		cpu.LoadSpc(spcData);
 		return cpu;
 	}
@@ -189,7 +190,7 @@ public class Spc700Tests {
 		// MOV A, #$10; MOV Y, #$08; MUL YA
 		var cpu = CreateCpuWithCode(0xe8, 0x10, 0x8d, 0x08, 0xcf);
 		cpu.Execute(13); // MOV(2) + MOV(2) + MUL(9)
-		// 0x10 * 0x08 = 0x80, so A=0x80, Y=0x00
+						 // 0x10 * 0x08 = 0x80, so A=0x80, Y=0x00
 		Assert.Equal(0x80, cpu.A);
 		Assert.Equal(0x00, cpu.Y);
 	}

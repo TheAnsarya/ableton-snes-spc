@@ -30,8 +30,8 @@ public static class SampleEffects {
 			float input = samples[i];
 			float delayed = delayBuffer[writeIndex];
 
-			float output = input * dry + delayed * wet;
-			delayBuffer[writeIndex] = input + delayed * feedback;
+			float output = (input * dry) + (delayed * wet);
+			delayBuffer[writeIndex] = input + (delayed * feedback);
 
 			writeIndex = (writeIndex + 1) % delaySamples;
 
@@ -54,7 +54,7 @@ public static class SampleEffects {
 		var result = new short[samples.Length];
 		for (int i = 0; i < samples.Length; i++) {
 			// Quantize to fewer bits
-			result[i] = (short)((samples[i] / step) * step);
+			result[i] = (short)(samples[i] / step * step);
 		}
 
 		return result;
@@ -76,6 +76,7 @@ public static class SampleEffects {
 			if (i % factor == 0) {
 				held = samples[i];
 			}
+
 			result[i] = held;
 		}
 
@@ -105,7 +106,7 @@ public static class SampleEffects {
 			if (absInput > thresholdValue) {
 				// Compress
 				float excess = absInput - thresholdValue;
-				float compressed = thresholdValue + excess / ratio;
+				float compressed = thresholdValue + (excess / ratio);
 				output = Math.Sign(input) * compressed;
 			} else {
 				output = input;
@@ -157,7 +158,7 @@ public static class SampleEffects {
 		float phase = 0;
 
 		for (int i = 0; i < samples.Length; i++) {
-			float mod = 1f - depth * (0.5f + 0.5f * MathF.Sin(phase));
+			float mod = 1f - (depth * (0.5f + (0.5f * MathF.Sin(phase))));
 			result[i] = (short)(samples[i] * mod);
 			phase += phaseIncrement;
 			if (phase > 2f * MathF.PI) phase -= 2f * MathF.PI;
@@ -188,7 +189,7 @@ public static class SampleEffects {
 			delayBuffer[bufferIndex] = samples[i];
 
 			// Calculate variable delay
-			float mod = 0.5f + 0.5f * MathF.Sin(phase);
+			float mod = 0.5f + (0.5f * MathF.Sin(phase));
 			int delay = (int)(mod * maxDelay * depth / 12f); // depth in semitones
 			delay = Math.Clamp(delay, 0, maxDelay - 1);
 
@@ -228,7 +229,7 @@ public static class SampleEffects {
 
 			// Variable delay with LFO
 			float mod = MathF.Sin(phase);
-			float delay = baseDelay + mod * (maxDelay / 2 - 1);
+			float delay = baseDelay + (mod * ((maxDelay / 2) - 1));
 
 			// Linear interpolation
 			int delay1 = (int)delay;
@@ -238,8 +239,8 @@ public static class SampleEffects {
 			int idx1 = (bufferIndex - delay1 + maxDelay) % maxDelay;
 			int idx2 = (bufferIndex - delay2 + maxDelay) % maxDelay;
 
-			float delayed = delayBuffer[idx1] * (1 - frac) + delayBuffer[idx2] * frac;
-			float output = samples[i] * dry + delayed * wet;
+			float delayed = (delayBuffer[idx1] * (1 - frac)) + (delayBuffer[idx2] * frac);
+			float output = (samples[i] * dry) + (delayed * wet);
 
 			result[i] = (short)Math.Clamp(output, short.MinValue, short.MaxValue);
 
@@ -273,7 +274,7 @@ public static class SampleEffects {
 
 		for (int i = 0; i < samples.Length; i++) {
 			// Variable delay (0 to maxDelay)
-			float mod = 0.5f + 0.5f * MathF.Sin(phase);
+			float mod = 0.5f + (0.5f * MathF.Sin(phase));
 			float delay = mod * (maxDelay - 1);
 
 			int delay1 = (int)delay;
@@ -283,12 +284,12 @@ public static class SampleEffects {
 			int idx1 = (bufferIndex - delay1 + maxDelay) % maxDelay;
 			int idx2 = (bufferIndex - delay2 + maxDelay) % maxDelay;
 
-			float delayed = delayBuffer[idx1] * (1 - frac) + delayBuffer[idx2] * frac;
+			float delayed = (delayBuffer[idx1] * (1 - frac)) + (delayBuffer[idx2] * frac);
 
 			// Store input + feedback
-			delayBuffer[bufferIndex] = samples[i] + delayed * feedback;
+			delayBuffer[bufferIndex] = samples[i] + (delayed * feedback);
 
-			float output = samples[i] * dry + delayed * wet;
+			float output = (samples[i] * dry) + (delayed * wet);
 			result[i] = (short)Math.Clamp(output, short.MinValue, short.MaxValue);
 
 			bufferIndex = (bufferIndex + 1) % maxDelay;
@@ -322,8 +323,8 @@ public static class SampleEffects {
 
 		for (int i = 0; i < samples.Length; i++) {
 			// Calculate allpass coefficient from LFO
-			float mod = 0.5f + 0.5f * MathF.Sin(phase);
-			float freq = minFreq + mod * depth * (maxFreq - minFreq);
+			float mod = 0.5f + (0.5f * MathF.Sin(phase));
+			float freq = minFreq + (mod * depth * (maxFreq - minFreq));
 			float coef = (MathF.Tan(MathF.PI * freq / sampleRate) - 1) /
 						 (MathF.Tan(MathF.PI * freq / sampleRate) + 1);
 
@@ -332,13 +333,13 @@ public static class SampleEffects {
 			// Apply allpass stages
 			float signal = input;
 			for (int s = 0; s < stages; s++) {
-				float allpassOut = coef * signal + allpassBuffers[s];
-				allpassBuffers[s] = signal - coef * allpassOut;
+				float allpassOut = (coef * signal) + allpassBuffers[s];
+				allpassBuffers[s] = signal - (coef * allpassOut);
 				signal = allpassOut;
 			}
 
 			// Mix with feedback
-			float output = (input + signal * feedback) * 0.5f;
+			float output = (input + (signal * feedback)) * 0.5f;
 
 			result[i] = (short)(Math.Clamp(output, -1f, 1f) * 32767f);
 			phase += phaseIncrement;
@@ -390,7 +391,7 @@ public static class SampleEffects {
 			float high = midHigh - mid;
 
 			// Apply gains and sum
-			float output = low * lowMul + mid * midMul + high * highMul;
+			float output = (low * lowMul) + (mid * midMul) + (high * highMul);
 
 			result[i] = (short)(Math.Clamp(output, -1f, 1f) * 32767f);
 		}
@@ -415,7 +416,7 @@ public static class SampleEffects {
 		for (int i = 0; i < samples.Length; i++) {
 			float mod = MathF.Sin(phase);
 			float modulated = samples[i] * mod;
-			float output = samples[i] * dry + modulated * wet;
+			float output = (samples[i] * dry) + (modulated * wet);
 
 			result[i] = (short)Math.Clamp(output, short.MinValue, short.MaxValue);
 			phase += phaseIncrement;
@@ -450,7 +451,7 @@ public static class SampleEffects {
 			}
 
 			int next = Math.Min(srcIdx + 1, samples.Length - 1);
-			result[i] = (short)(samples[srcIdx] * (1 - frac) + samples[next] * frac);
+			result[i] = (short)((samples[srcIdx] * (1 - frac)) + (samples[next] * frac));
 		}
 
 		return result;
@@ -484,7 +485,7 @@ public static class SampleEffects {
 		int fadeStart = samples.Length - fadeSamples;
 
 		for (int i = 0; i < fadeSamples; i++) {
-			float gain = 1f - (float)i / fadeSamples;
+			float gain = 1f - ((float)i / fadeSamples);
 			result[fadeStart + i] = (short)(samples[fadeStart + i] * gain);
 		}
 

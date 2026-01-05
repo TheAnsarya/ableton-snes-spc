@@ -53,6 +53,7 @@ public static class BrrCodec {
 		if (brrBlock.Length < BytesPerBlock) {
 			throw new ArgumentException("BRR block must be 9 bytes", nameof(brrBlock));
 		}
+
 		if (output.Length < SamplesPerBlock) {
 			throw new ArgumentException("Output must hold 16 samples", nameof(output));
 		}
@@ -107,6 +108,7 @@ public static class BrrCodec {
 		if (samples.Length < SamplesPerBlock) {
 			throw new ArgumentException("Input must have 16 samples", nameof(samples));
 		}
+
 		if (output.Length < BytesPerBlock) {
 			throw new ArgumentException("Output must hold 9 bytes", nameof(output));
 		}
@@ -174,6 +176,7 @@ public static class BrrCodec {
 		for (int shift = 0; shift <= 12; shift++) {
 			if ((maxAbs >> shift) <= 7) return shift;
 		}
+
 		return 12;
 	}
 

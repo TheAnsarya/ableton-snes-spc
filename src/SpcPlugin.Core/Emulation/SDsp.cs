@@ -166,12 +166,7 @@ public sealed class SDsp {
 				if (!voice.Playing) continue;
 
 				// Get sample (noise or BRR)
-				short sample;
-				if ((_non & (1 << v)) != 0) {
-					sample = (short)_noise;
-				} else {
-					sample = voice.GetSample(Ram);
-				}
+				short sample = (_non & (1 << v)) != 0 ? (short)_noise : voice.GetSample(Ram);
 
 				// Apply envelope
 				sample = (short)((sample * voice.EnvLevel) >> 11);
@@ -217,6 +212,7 @@ public sealed class SDsp {
 						firL += _echoHistL[idx] * _fir[f];
 						firR += _echoHistR[idx] * _fir[f];
 					}
+
 					echoOutL = firL >> 7;
 					echoOutR = firR >> 7;
 
@@ -256,7 +252,7 @@ public sealed class SDsp {
 
 			// Clamp and convert to float
 			output[i * 2] = Math.Clamp(outL, short.MinValue, short.MaxValue) / 32768f;
-			output[i * 2 + 1] = Math.Clamp(outR, short.MinValue, short.MaxValue) / 32768f;
+			output[(i * 2) + 1] = Math.Clamp(outR, short.MinValue, short.MaxValue) / 32768f;
 		}
 	}
 
@@ -299,6 +295,7 @@ public sealed class SDsp {
 				_endx &= (byte)~(1 << i);
 			}
 		}
+
 		_keyOn = 0;
 	}
 
@@ -404,7 +401,7 @@ public sealed class SDsp {
 			int g2 = GaussTable[256 + frac];
 			int g3 = GaussTable[frac];
 
-			int result = (s0 * g0 + s1 * g1 + s2 * g2 + s3 * g3) >> 11;
+			int result = ((s0 * g0) + (s1 * g1) + (s2 * g2) + (s3 * g3)) >> 11;
 
 			return (short)Math.Clamp(result, short.MinValue, short.MaxValue);
 		}
@@ -438,6 +435,7 @@ public sealed class SDsp {
 				} else {
 					_brrAddress += 9;
 				}
+
 				_brrOffset = 0;
 			}
 		}
@@ -487,6 +485,7 @@ public sealed class SDsp {
 						EnvLevel = 0x7ff;
 						_envMode = EnvelopeMode.Decay;
 					}
+
 					break;
 
 				case EnvelopeMode.Decay:
@@ -495,6 +494,7 @@ public sealed class SDsp {
 					if (EnvLevel <= sustainLevel) {
 						_envMode = EnvelopeMode.Sustain;
 					}
+
 					break;
 
 				case EnvelopeMode.Sustain:
@@ -502,6 +502,7 @@ public sealed class SDsp {
 					if (sr != 0) {
 						EnvLevel -= ((EnvLevel - 1) >> 8) + 1;
 					}
+
 					if (EnvLevel < 0) EnvLevel = 0;
 					break;
 
@@ -511,6 +512,7 @@ public sealed class SDsp {
 						EnvLevel = 0;
 						Playing = false;
 					}
+
 					break;
 
 				case EnvelopeMode.Direct:
@@ -521,6 +523,7 @@ public sealed class SDsp {
 						// TODO: Implement bent line envelope modes
 						EnvLevel = 0x7ff;
 					}
+
 					break;
 			}
 		}

@@ -12,10 +12,6 @@ namespace SpcPlugin.Core.UI;
 public class SampleBrowserViewModel : INotifyPropertyChanged {
 	private readonly SpcEngine _engine;
 	private readonly RealtimeSampleEditor _sampleEditor;
-	private int _selectedSampleIndex = -1;
-	private SampleInfo? _selectedSample;
-	private float[]? _selectedWaveform;
-	private List<SampleInfo> _samples = [];
 
 	public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -28,42 +24,42 @@ public class SampleBrowserViewModel : INotifyPropertyChanged {
 	/// List of all samples in the SPC.
 	/// </summary>
 	public List<SampleInfo> Samples {
-		get => _samples;
-		private set => SetField(ref _samples, value);
-	}
+		get;
+		private set => SetField(ref field, value);
+	} = [];
 
 	/// <summary>
 	/// Currently selected sample index (-1 if none).
 	/// </summary>
 	public int SelectedSampleIndex {
-		get => _selectedSampleIndex;
+		get;
 		set {
-			if (SetField(ref _selectedSampleIndex, value)) {
+			if (SetField(ref field, value)) {
 				LoadSelectedSample();
 			}
 		}
-	}
+	} = -1;
 
 	/// <summary>
 	/// Currently selected sample info.
 	/// </summary>
 	public SampleInfo? SelectedSample {
-		get => _selectedSample;
-		private set => SetField(ref _selectedSample, value);
+		get;
+		private set => SetField(ref field, value);
 	}
 
 	/// <summary>
 	/// Waveform data for the selected sample.
 	/// </summary>
 	public float[]? SelectedWaveform {
-		get => _selectedWaveform;
-		private set => SetField(ref _selectedWaveform, value);
+		get;
+		private set => SetField(ref field, value);
 	}
 
 	/// <summary>
 	/// Whether a sample is selected.
 	/// </summary>
-	public bool HasSelection => _selectedSampleIndex >= 0 && _selectedSample != null;
+	public bool HasSelection => SelectedSampleIndex >= 0 && SelectedSample != null;
 
 	/// <summary>
 	/// Refreshes the sample list from the current SPC.
@@ -97,7 +93,7 @@ public class SampleBrowserViewModel : INotifyPropertyChanged {
 
 		Samples = list;
 
-		if (_selectedSampleIndex >= 0 && _selectedSampleIndex < list.Count) {
+		if (SelectedSampleIndex >= 0 && SelectedSampleIndex < list.Count) {
 			LoadSelectedSample();
 		} else {
 			SelectedSampleIndex = list.Count > 0 ? 0 : -1;
@@ -105,13 +101,13 @@ public class SampleBrowserViewModel : INotifyPropertyChanged {
 	}
 
 	private void LoadSelectedSample() {
-		if (_selectedSampleIndex < 0 || _selectedSampleIndex >= _samples.Count) {
+		if (SelectedSampleIndex < 0 || SelectedSampleIndex >= Samples.Count) {
 			SelectedSample = null;
 			SelectedWaveform = null;
 			return;
 		}
 
-		var sample = _samples[_selectedSampleIndex];
+		var sample = Samples[SelectedSampleIndex];
 		SelectedSample = sample;
 
 		// Decode BRR for visualization
@@ -491,8 +487,8 @@ public class EchoEditorViewModel : INotifyPropertyChanged {
 	public int VolumeLeft {
 		get => _editor.EchoVolume.Left;
 		set {
-			var current = _editor.EchoVolume;
-			_editor.EchoVolume = ((sbyte)Math.Clamp(value, -128, 127), current.Right);
+			var (Left, Right) = _editor.EchoVolume;
+			_editor.EchoVolume = ((sbyte)Math.Clamp(value, -128, 127), Right);
 			OnPropertyChanged();
 		}
 	}
@@ -503,8 +499,8 @@ public class EchoEditorViewModel : INotifyPropertyChanged {
 	public int VolumeRight {
 		get => _editor.EchoVolume.Right;
 		set {
-			var current = _editor.EchoVolume;
-			_editor.EchoVolume = (current.Left, (sbyte)Math.Clamp(value, -128, 127));
+			var (Left, Right) = _editor.EchoVolume;
+			_editor.EchoVolume = (Left, (sbyte)Math.Clamp(value, -128, 127));
 			OnPropertyChanged();
 		}
 	}

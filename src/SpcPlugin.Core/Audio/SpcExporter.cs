@@ -43,7 +43,7 @@ public static class SpcExporter {
 			float fadeProgress = (float)(i - fadeStartSample) / (totalSamples - fadeStartSample);
 			float fadeMultiplier = 1.0f - fadeProgress;
 			samples[i * 2] *= fadeMultiplier;
-			samples[i * 2 + 1] *= fadeMultiplier;
+			samples[(i * 2) + 1] *= fadeMultiplier;
 		}
 
 		// Write WAV file
@@ -108,7 +108,7 @@ public static class SpcExporter {
 		for (int i = 0; i < pcmSamples.Length; i++) {
 			float sample = pcmSamples[i] / 32768f;
 			floatSamples[i * 2] = sample;
-			floatSamples[i * 2 + 1] = sample;
+			floatSamples[(i * 2) + 1] = sample;
 		}
 
 		WriteWavFile(outputPath, floatSamples, sampleRate);
@@ -150,8 +150,9 @@ public static class SpcExporter {
 					for (int i = 0; i < pcmSamples.Length; i++) {
 						float sample = pcmSamples[i] / 32768f;
 						floatSamples[i * 2] = sample;
-						floatSamples[i * 2 + 1] = sample;
+						floatSamples[(i * 2) + 1] = sample;
 					}
+
 					WriteWavFile(filename, floatSamples, sampleRate);
 				}
 			} catch {

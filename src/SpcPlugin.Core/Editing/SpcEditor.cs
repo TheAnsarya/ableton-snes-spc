@@ -7,12 +7,11 @@ namespace SpcPlugin.Core.Editing;
 public sealed class SpcEditor {
 	private readonly byte[] _ram = new byte[0x10000];
 	private readonly byte[] _dspRegisters = new byte[128];
-	private bool _modified;
 
 	/// <summary>
 	/// Gets whether the SPC data has been modified.
 	/// </summary>
-	public bool IsModified => _modified;
+	public bool IsModified { get; private set; }
 
 	/// <summary>
 	/// Gets the raw RAM buffer for direct access.
@@ -34,7 +33,7 @@ public sealed class SpcEditor {
 
 		spcData.Slice(0x100, 0x10000).CopyTo(_ram);
 		spcData.Slice(0x10100, 128).CopyTo(_dspRegisters);
-		_modified = false;
+		IsModified = false;
 	}
 
 	/// <summary>
@@ -106,7 +105,7 @@ public sealed class SpcEditor {
 		int baseReg = voice << 4;
 		_dspRegisters[baseReg | 0x00] = (byte)left;
 		_dspRegisters[baseReg | 0x01] = (byte)right;
-		_modified = true;
+		IsModified = true;
 	}
 
 	/// <summary>
@@ -117,7 +116,7 @@ public sealed class SpcEditor {
 		int baseReg = voice << 4;
 		_dspRegisters[baseReg | 0x02] = (byte)(pitch & 0xff);
 		_dspRegisters[baseReg | 0x03] = (byte)((pitch >> 8) & 0x3f);
-		_modified = true;
+		IsModified = true;
 	}
 
 	/// <summary>
@@ -126,7 +125,7 @@ public sealed class SpcEditor {
 	public void SetVoiceSource(int voice, byte sourceNumber) {
 		ValidateVoice(voice);
 		_dspRegisters[(voice << 4) | 0x04] = sourceNumber;
-		_modified = true;
+		IsModified = true;
 	}
 
 	/// <summary>
@@ -137,7 +136,7 @@ public sealed class SpcEditor {
 		int baseReg = voice << 4;
 		_dspRegisters[baseReg | 0x05] = adsr1;
 		_dspRegisters[baseReg | 0x06] = adsr2;
-		_modified = true;
+		IsModified = true;
 	}
 
 	/// <summary>
@@ -146,7 +145,7 @@ public sealed class SpcEditor {
 	public void SetVoiceGain(int voice, byte gain) {
 		ValidateVoice(voice);
 		_dspRegisters[(voice << 4) | 0x07] = gain;
-		_modified = true;
+		IsModified = true;
 	}
 
 	#endregion
@@ -161,7 +160,7 @@ public sealed class SpcEditor {
 		set {
 			_dspRegisters[0x0c] = (byte)value.Left;
 			_dspRegisters[0x1c] = (byte)value.Right;
-			_modified = true;
+			IsModified = true;
 		}
 	}
 
@@ -173,7 +172,7 @@ public sealed class SpcEditor {
 		set {
 			_dspRegisters[0x2c] = (byte)value.Left;
 			_dspRegisters[0x3c] = (byte)value.Right;
-			_modified = true;
+			IsModified = true;
 		}
 	}
 
@@ -184,7 +183,7 @@ public sealed class SpcEditor {
 		get => (sbyte)_dspRegisters[0x0d];
 		set {
 			_dspRegisters[0x0d] = (byte)value;
-			_modified = true;
+			IsModified = true;
 		}
 	}
 
@@ -195,7 +194,7 @@ public sealed class SpcEditor {
 		get => (byte)(_dspRegisters[0x7d] & 0x0f);
 		set {
 			_dspRegisters[0x7d] = (byte)(value & 0x0f);
-			_modified = true;
+			IsModified = true;
 		}
 	}
 
@@ -210,7 +209,8 @@ public sealed class SpcEditor {
 		for (int i = 0; i < 8; i++) {
 			_dspRegisters[(i << 4) | 0x0f] = (byte)coefficients[i];
 		}
-		_modified = true;
+
+		IsModified = true;
 	}
 
 	/// <summary>
@@ -221,6 +221,7 @@ public sealed class SpcEditor {
 		for (int i = 0; i < 8; i++) {
 			result[i] = (sbyte)_dspRegisters[(i << 4) | 0x0f];
 		}
+
 		return result;
 	}
 
@@ -231,7 +232,7 @@ public sealed class SpcEditor {
 		get => _dspRegisters[0x4d];
 		set {
 			_dspRegisters[0x4d] = value;
-			_modified = true;
+			IsModified = true;
 		}
 	}
 
@@ -242,7 +243,7 @@ public sealed class SpcEditor {
 		get => _dspRegisters[0x3d];
 		set {
 			_dspRegisters[0x3d] = value;
-			_modified = true;
+			IsModified = true;
 		}
 	}
 
@@ -253,7 +254,7 @@ public sealed class SpcEditor {
 		get => _dspRegisters[0x2d];
 		set {
 			_dspRegisters[0x2d] = value;
-			_modified = true;
+			IsModified = true;
 		}
 	}
 
@@ -312,7 +313,7 @@ public sealed class SpcEditor {
 	public void KeyOnVoice(int voice) {
 		ValidateVoice(voice);
 		_dspRegisters[0x4c] = (byte)(1 << voice);
-		_modified = true;
+		IsModified = true;
 	}
 
 	/// <summary>
@@ -321,7 +322,7 @@ public sealed class SpcEditor {
 	public void KeyOffVoice(int voice) {
 		ValidateVoice(voice);
 		_dspRegisters[0x5c] = (byte)(1 << voice);
-		_modified = true;
+		IsModified = true;
 	}
 
 	/// <summary>
@@ -397,6 +398,7 @@ public sealed class SpcEditor {
 			if ((header & 0x01) != 0) { // End flag
 				break;
 			}
+
 			addr += 9;
 		}
 
@@ -430,7 +432,7 @@ public sealed class SpcEditor {
 		_ram[dirAddr + 1] = (byte)(startAddress >> 8);
 		_ram[dirAddr + 2] = (byte)(loopAddress & 0xff);
 		_ram[dirAddr + 3] = (byte)(loopAddress >> 8);
-		_modified = true;
+		IsModified = true;
 	}
 
 	#endregion
@@ -564,7 +566,7 @@ public sealed class SpcEditor {
 			addr += 9;
 		}
 
-		_modified = true;
+		IsModified = true;
 		return outputSize;
 	}
 

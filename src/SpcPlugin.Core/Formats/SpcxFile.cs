@@ -1,8 +1,8 @@
-namespace SpcPlugin.Core.Formats;
 
 using System.IO.Compression;
 using System.Text.Json;
 
+namespace SpcPlugin.Core.Formats;
 /// <summary>
 /// SPCX project file format handler.
 /// SPCX is a ZIP-based format containing SPC state, metadata, and editor settings.

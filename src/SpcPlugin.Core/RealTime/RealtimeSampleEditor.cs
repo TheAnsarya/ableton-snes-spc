@@ -39,7 +39,7 @@ public class RealtimeSampleEditor {
 				var info = Editor.GetSampleInfo(sourceNumber);
 				if (info.StartAddress > 0) {
 					// Estimate size and save
-					int estimatedSize = (pcmSamples.Length / 16 + 1) * 9;
+					int estimatedSize = ((pcmSamples.Length / 16) + 1) * 9;
 					_originalSamples[sourceNumber] = Editor.Ram.Slice(info.StartAddress, Math.Min(estimatedSize, 0x10000 - info.StartAddress)).ToArray();
 				}
 			}
@@ -58,7 +58,7 @@ public class RealtimeSampleEditor {
 			int brrSize = Editor.EncodeBrr(pcmSamples, address, loop, loopPoint);
 
 			// Update sample directory
-			int loopAddress = loop ? address + ((loopPoint / 16) * 9) : address;
+			int loopAddress = loop ? address + (loopPoint / 16 * 9) : address;
 			Editor.SetSampleInfo(sourceNumber, (ushort)address, (ushort)loopAddress);
 		}
 	}
@@ -238,7 +238,7 @@ public class RealtimeSampleEditor {
 
 	private int FindFreeRamSpace(int samplesNeeded) {
 		// Estimate BRR size needed
-		int brrSize = ((samplesNeeded + 15) / 16) * 9;
+		int brrSize = (samplesNeeded + 15) / 16 * 9;
 
 		// Look for free space after echo buffer
 		if (Editor == null) return 0;
@@ -292,12 +292,14 @@ public class RealtimeSampleEditor {
 						for (int c = 0; c < channels; c++) {
 							sum += reader.ReadInt16();
 						}
+
 						samples[i] = (short)(sum / channels);
 					} else if (bitsPerSample == 8) {
 						int sum = 0;
 						for (int c = 0; c < channels; c++) {
 							sum += (reader.ReadByte() - 128) * 256;
 						}
+
 						samples[i] = (short)(sum / channels);
 					}
 				}
@@ -326,11 +328,7 @@ public class RealtimeSampleEditor {
 			int srcIndex = (int)srcPos;
 			double frac = srcPos - srcIndex;
 
-			if (srcIndex + 1 < samples.Length) {
-				result[i] = (short)(samples[srcIndex] * (1 - frac) + samples[srcIndex + 1] * frac);
-			} else {
-				result[i] = samples[^1];
-			}
+			result[i] = srcIndex + 1 < samples.Length ? (short)((samples[srcIndex] * (1 - frac)) + (samples[srcIndex + 1] * frac)) : samples[^1];
 		}
 
 		return result;

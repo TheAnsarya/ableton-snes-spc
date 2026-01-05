@@ -48,6 +48,7 @@ public class SpcPreset {
 		for (int i = 0; i < 8; i++) {
 			voices[i] = new VoicePreset { VoiceIndex = i };
 		}
+
 		return voices;
 	}
 }

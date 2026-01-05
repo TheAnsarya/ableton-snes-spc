@@ -15,7 +15,6 @@ public class MidiProcessor {
 	private readonly int[] _voicePitchBend = new int[8]; // -8192 to +8191
 
 	// Global state
-	private int _pitchBendRange = 2; // Semitones
 	private bool _sustainPedalDown;
 	private readonly bool[] _voiceSustained = new bool[8];
 
@@ -27,9 +26,9 @@ public class MidiProcessor {
 	/// Gets or sets the pitch bend range in semitones (default: 2).
 	/// </summary>
 	public int PitchBendRange {
-		get => _pitchBendRange;
-		set => _pitchBendRange = Math.Clamp(value, 1, 24);
-	}
+		get;
+		set => field = Math.Clamp(value, 1, 24);
+	} = 2;
 
 	/// <summary>
 	/// Process a single MIDI event.
@@ -126,7 +125,7 @@ public class MidiProcessor {
 		switch (controller) {
 			case MidiControllers.Volume:
 				// CC7: Master volume
-				_engine.MasterVolume = (value / 127f) * 2f; // 0-200%
+				_engine.MasterVolume = value / 127f * 2f; // 0-200%
 				break;
 
 			case MidiControllers.Pan:
@@ -148,6 +147,7 @@ public class MidiProcessor {
 				if (wasDown && !_sustainPedalDown) {
 					ReleaseSustainedVoices();
 				}
+
 				break;
 
 			case MidiControllers.VoiceMute:
@@ -156,6 +156,7 @@ public class MidiProcessor {
 					bool currentMute = _engine.GetVoiceMuted(value);
 					_engine.SetVoiceMuted(value, !currentMute);
 				}
+
 				break;
 
 			case MidiControllers.VoiceSolo:
@@ -164,11 +165,12 @@ public class MidiProcessor {
 					bool currentSolo = _engine.GetVoiceSolo(value);
 					_engine.SetVoiceSolo(value, !currentSolo);
 				}
+
 				break;
 
 			case MidiControllers.MasterVolume:
 				// CC104: Master volume (0-127 -> 0-200%)
-				_engine.MasterVolume = (value / 127f) * 2f;
+				_engine.MasterVolume = value / 127f * 2f;
 				break;
 
 			case MidiControllers.EchoFeedback:
@@ -200,6 +202,7 @@ public class MidiProcessor {
 						_engine.Play();
 					}
 				}
+
 				break;
 
 			case MidiControllers.Reset:
@@ -207,6 +210,7 @@ public class MidiProcessor {
 				if (value >= 64) {
 					_engine.Stop();
 				}
+
 				break;
 
 			// All Notes Off
@@ -249,7 +253,7 @@ public class MidiProcessor {
 
 		// Calculate pitch multiplier from bend value
 		// bendValue -8192 to +8191 maps to -PitchBendRange to +PitchBendRange semitones
-		double semitones = (_voicePitchBend[voice] / 8192.0) * _pitchBendRange;
+		double semitones = _voicePitchBend[voice] / 8192.0 * PitchBendRange;
 		double pitchMultiplier = Math.Pow(2.0, semitones / 12.0);
 
 		// Apply to base pitch
@@ -278,6 +282,7 @@ public class MidiProcessor {
 			_engine.Editor?.KeyOffVoice(voice);
 			_voiceVelocity[voice] = 0;
 		}
+
 		Array.Clear(_voiceSustained);
 	}
 
@@ -287,6 +292,7 @@ public class MidiProcessor {
 			_engine.SetVoiceMuted(voice, true);
 			_voiceVelocity[voice] = 0;
 		}
+
 		Array.Clear(_voiceSustained);
 	}
 

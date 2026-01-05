@@ -9,6 +9,7 @@ public class SampleEffectsTests {
 		for (int i = 0; i < length; i++) {
 			samples[i] = (short)(Math.Sin(i * 0.1) * 16000);
 		}
+
 		return samples;
 	}
 
@@ -139,6 +140,7 @@ public class SampleEffectsTests {
 		for (int i = 100; i < input.Length; i++) {
 			if (result[i] != input[i]) differences++;
 		}
+
 		Assert.True(differences > input.Length / 2);
 	}
 
@@ -182,6 +184,7 @@ public class SampleEffectsTests {
 		for (int i = 0; i < input.Length; i++) {
 			if (result[i] != input[i]) differences++;
 		}
+
 		Assert.True(differences > 0);
 	}
 
@@ -243,6 +246,7 @@ public class SampleEffectsTests {
 		for (int i = 0; i < input.Length; i++) {
 			if (result[i] != input[i]) differences++;
 		}
+
 		Assert.True(differences > 0);
 	}
 }

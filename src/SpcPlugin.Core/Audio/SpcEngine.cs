@@ -1,8 +1,8 @@
-namespace SpcPlugin.Core.Audio;
 
-using SpcPlugin.Core.Emulation;
 using SpcPlugin.Core.Editing;
+using SpcPlugin.Core.Emulation;
 
+namespace SpcPlugin.Core.Audio;
 /// <summary>
 /// Main audio engine that coordinates SPC700 CPU and S-DSP emulation
 /// to generate audio output. Designed for use as a VST3 instrument in DAWs like Ableton Live.
@@ -10,12 +10,10 @@ using SpcPlugin.Core.Editing;
 public sealed class SpcEngine : IDisposable {
 	private readonly Spc700 _cpu;
 	private readonly SDsp _dsp;
-	private readonly SpcEditor _editor;
 	private byte[] _ramBuffer;
 
 	private readonly float[] _outputBuffer;
 	private int _sampleRate;
-	private bool _isPlaying;
 	private bool _disposed;
 
 	// Voice control for Ableton automation
@@ -24,17 +22,12 @@ public sealed class SpcEngine : IDisposable {
 	private readonly float[] _voiceVolume = [1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f];
 
 	// Master controls
-	private float _masterVolume = 1.0f;
-	private bool _loopEnabled = true;
 
 	// Position tracking for DAW sync
-	private long _totalSamplesGenerated;
 	private long _loopStartSample;
 	private long _loopEndSample;
 
 	// Tempo sync (BPM from DAW)
-	private double _hostTempo = 120.0;
-	private double _hostTimeSignatureNumerator = 4;
 	private double _hostTimeSignatureDenominator = 4;
 
 	// Timing constants
@@ -44,7 +37,7 @@ public sealed class SpcEngine : IDisposable {
 	/// <summary>
 	/// Gets whether the engine is currently playing.
 	/// </summary>
-	public bool IsPlaying => _isPlaying;
+	public bool IsPlaying { get; private set; }
 
 	/// <summary>
 	/// Gets or sets the output sample rate (for resampling).
@@ -57,33 +50,27 @@ public sealed class SpcEngine : IDisposable {
 	/// <summary>
 	/// Gets or sets the master volume (0.0 - 1.0).
 	/// </summary>
-	public float MasterVolume {
-		get => _masterVolume;
-		set => _masterVolume = Math.Clamp(value, 0f, 2f);
-	}
+	public float MasterVolume { get; set => field = Math.Clamp(value, 0f, 2f); } = 1.0f;
 
 	/// <summary>
 	/// Gets or sets whether looping is enabled.
 	/// </summary>
-	public bool LoopEnabled {
-		get => _loopEnabled;
-		set => _loopEnabled = value;
-	}
+	public bool LoopEnabled { get; set; } = true;
 
 	/// <summary>
 	/// Gets the current playback position in samples.
 	/// </summary>
-	public long Position => _totalSamplesGenerated;
+	public long Position { get; private set; }
 
 	/// <summary>
 	/// Gets the current playback position in seconds.
 	/// </summary>
-	public double PositionSeconds => (double)_totalSamplesGenerated / _sampleRate;
+	public double PositionSeconds => (double)Position / _sampleRate;
 
 	/// <summary>
 	/// Gets the editor for modifying the loaded SPC.
 	/// </summary>
-	public SpcEditor Editor => _editor;
+	public SpcEditor Editor { get; }
 
 	/// <summary>
 	/// Gets the total CPU cycles executed.
@@ -97,7 +84,7 @@ public sealed class SpcEngine : IDisposable {
 	public SpcEngine(int sampleRate = 44100) {
 		_cpu = new Spc700();
 		_dsp = new SDsp();
-		_editor = new SpcEditor();
+		Editor = new SpcEditor();
 		_ramBuffer = new byte[0x10000];
 		_outputBuffer = new float[8192];
 		_sampleRate = sampleRate;
@@ -143,23 +130,23 @@ public sealed class SpcEngine : IDisposable {
 	/// Starts playback.
 	/// </summary>
 	public void Play() {
-		_isPlaying = true;
+		IsPlaying = true;
 	}
 
 	/// <summary>
 	/// Pauses playback.
 	/// </summary>
 	public void Pause() {
-		_isPlaying = false;
+		IsPlaying = false;
 	}
 
 	/// <summary>
 	/// Stops playback and resets to beginning.
 	/// </summary>
 	public void Stop() {
-		_isPlaying = false;
+		IsPlaying = false;
 		_cpu.Reset();
-		_totalSamplesGenerated = 0;
+		Position = 0;
 	}
 
 	/// <summary>
@@ -168,15 +155,15 @@ public sealed class SpcEngine : IDisposable {
 	/// </summary>
 	public void Seek(double seconds) {
 		_cpu.Reset();
-		_totalSamplesGenerated = 0;
+		Position = 0;
 
 		int targetSamples = (int)(seconds * NativeSampleRate);
 		var tempBuffer = new float[1024];
 
-		while (_totalSamplesGenerated < targetSamples) {
-			int samplesToGenerate = Math.Min(512, (int)(targetSamples - _totalSamplesGenerated));
+		while (Position < targetSamples) {
+			int samplesToGenerate = Math.Min(512, (int)(targetSamples - Position));
 			GenerateNative(tempBuffer.AsSpan(0, samplesToGenerate * 2), samplesToGenerate);
-			_totalSamplesGenerated += samplesToGenerate;
+			Position += samplesToGenerate;
 		}
 	}
 
@@ -253,14 +240,10 @@ public sealed class SpcEngine : IDisposable {
 
 		byte mask = 0;
 		for (int i = 0; i < 8; i++) {
-			bool enabled;
-			if (anySolo) {
-				enabled = _voiceSolo[i] && !_voiceMuted[i];
-			} else {
-				enabled = !_voiceMuted[i];
-			}
+			bool enabled = anySolo ? _voiceSolo[i] && !_voiceMuted[i] : !_voiceMuted[i];
 			if (enabled) mask |= (byte)(1 << i);
 		}
+
 		return mask;
 	}
 
@@ -277,14 +260,14 @@ public sealed class SpcEngine : IDisposable {
 	/// Sets the host tempo for tempo-sync features.
 	/// </summary>
 	public void SetHostTempo(double bpm) {
-		_hostTempo = Math.Clamp(bpm, 20, 999);
+		PositionBeats = Math.Clamp(bpm, 20, 999);
 	}
 
 	/// <summary>
 	/// Sets the host time signature.
 	/// </summary>
 	public void SetTimeSignature(double numerator, double denominator) {
-		_hostTimeSignatureNumerator = numerator;
+		PositionBars = numerator;
 		_hostTimeSignatureDenominator = denominator;
 	}
 
@@ -299,12 +282,12 @@ public sealed class SpcEngine : IDisposable {
 	/// <summary>
 	/// Gets the current position in beats (based on host tempo).
 	/// </summary>
-	public double PositionBeats => PositionSeconds * (_hostTempo / 60.0);
+	public double PositionBeats { get => PositionSeconds * (field / 60.0); private set; } = 120.0;
 
 	/// <summary>
 	/// Gets the current position in bars.
 	/// </summary>
-	public double PositionBars => PositionBeats / _hostTimeSignatureNumerator;
+	public double PositionBars { get => PositionBeats / field; private set; } = 4;
 
 	#endregion
 
@@ -315,7 +298,7 @@ public sealed class SpcEngine : IDisposable {
 	/// <param name="output">Interleaved stereo output (L, R, L, R, ...).</param>
 	/// <param name="sampleCount">Number of stereo sample pairs to generate.</param>
 	public void Process(Span<float> output, int sampleCount) {
-		if (!_isPlaying) {
+		if (!IsPlaying) {
 			output[..(sampleCount * 2)].Clear();
 			return;
 		}
@@ -333,10 +316,10 @@ public sealed class SpcEngine : IDisposable {
 
 		// Apply master volume
 		for (int i = 0; i < sampleCount * 2; i++) {
-			output[i] *= _masterVolume;
+			output[i] *= MasterVolume;
 		}
 
-		_totalSamplesGenerated += sampleCount;
+		Position += sampleCount;
 	}
 
 	private void GenerateNative(Span<float> output, int sampleCount) {
@@ -366,13 +349,13 @@ public sealed class SpcEngine : IDisposable {
 
 			// Interpolate left channel
 			output[i * 2] = (float)(
-				input[idx1] * (1 - frac) +
-				input[idx2] * frac);
+				(input[idx1] * (1 - frac)) +
+				(input[idx2] * frac));
 
 			// Interpolate right channel
-			output[i * 2 + 1] = (float)(
-				input[idx1 + 1] * (1 - frac) +
-				input[idx2 + 1] * frac);
+			output[(i * 2) + 1] = (float)(
+				(input[idx1 + 1] * (1 - frac)) +
+				(input[idx2 + 1] * frac));
 		}
 	}
 
@@ -382,6 +365,6 @@ public sealed class SpcEngine : IDisposable {
 	public void Dispose() {
 		if (_disposed) return;
 		_disposed = true;
-		_isPlaying = false;
+		IsPlaying = false;
 	}
 }

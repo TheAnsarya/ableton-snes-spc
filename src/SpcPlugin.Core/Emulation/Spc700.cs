@@ -9,27 +9,19 @@ public sealed class Spc700 {
 	private readonly byte[] _ipl = new byte[64];      // IPL ROM (boot code)
 
 	// Registers
-	private ushort _pc;  // Program counter
-	private byte _a;     // Accumulator
-	private byte _x;     // X index
-	private byte _y;     // Y index
-	private byte _sp;    // Stack pointer
-	private byte _psw;   // Program status word
 
 	// Cycle tracking
-	private long _totalCycles;
 
 	// CPU state
 	private bool _stopped;
 	private bool _sleeping;
 
 	// DSP interface
-	private SDsp? _dsp;
 
 	/// <summary>
 	/// Gets the total number of cycles executed.
 	/// </summary>
-	public long TotalCycles => _totalCycles;
+	public long TotalCycles { get; private set; }
 
 	/// <summary>
 	/// Gets a span view of the 64KB RAM.
@@ -39,30 +31,27 @@ public sealed class Spc700 {
 	/// <summary>
 	/// Gets or sets the DSP reference for register access.
 	/// </summary>
-	public SDsp? Dsp {
-		get => _dsp;
-		set => _dsp = value;
-	}
+	public SDsp? Dsp { get; set; }
 
 	// Test/debug accessors for registers
-	public byte A => _a;
-	public byte X => _x;
-	public byte Y => _y;
-	public ushort PC => _pc;
-	public byte SP => _sp;
-	public byte PSW => _psw;
+	public byte A { get; private set; }
+	public byte X { get; private set; }
+	public byte Y { get; private set; }
+	public ushort PC { get; private set; }
+	public byte SP { get; private set; }
+	public byte PSW { get; private set; }
 
 	/// <summary>
 	/// Resets the CPU to initial state.
 	/// </summary>
 	public void Reset() {
-		_pc = 0xffc0; // Start of IPL ROM
-		_a = 0;
-		_x = 0;
-		_y = 0;
-		_sp = 0xef;
-		_psw = 0;
-		_totalCycles = 0;
+		PC = 0xffc0; // Start of IPL ROM
+		A = 0;
+		X = 0;
+		Y = 0;
+		SP = 0xef;
+		PSW = 0;
+		TotalCycles = 0;
 		_stopped = false;
 		_sleeping = false;
 	}
@@ -83,12 +72,12 @@ public sealed class Spc700 {
 		spcData.Slice(ramOffset, 0x10000).CopyTo(_ram);
 
 		// Load registers from header
-		_pc = (ushort)(spcData[0x25] | (spcData[0x26] << 8));
-		_a = spcData[0x27];
-		_x = spcData[0x28];
-		_y = spcData[0x29];
-		_psw = spcData[0x2a];
-		_sp = spcData[0x2b];
+		PC = (ushort)(spcData[0x25] | (spcData[0x26] << 8));
+		A = spcData[0x27];
+		X = spcData[0x28];
+		Y = spcData[0x29];
+		PSW = spcData[0x2a];
+		SP = spcData[0x2b];
 
 		_stopped = false;
 		_sleeping = false;
@@ -102,9 +91,9 @@ public sealed class Spc700 {
 		if (_stopped) return 2;
 		if (_sleeping) return 2; // TODO: Wake on timer/interrupt
 
-		byte opcode = ReadByte(_pc++);
+		byte opcode = ReadByte(PC++);
 		int cycles = ExecuteOpcode(opcode);
-		_totalCycles += cycles;
+		TotalCycles += cycles;
 		return cycles;
 	}
 
@@ -118,6 +107,7 @@ public sealed class Spc700 {
 		while (executed < targetCycles) {
 			executed += Step();
 		}
+
 		return executed;
 	}
 
@@ -130,8 +120,9 @@ public sealed class Spc700 {
 		if (address == 0x00f2) {
 			return _ram[0x00f2]; // DSP address register
 		}
+
 		if (address == 0x00f3) {
-			return _dsp?.ReadRegister(_ram[0x00f2]) ?? 0;
+			return Dsp?.ReadRegister(_ram[0x00f2]) ?? 0;
 		}
 
 		// IPL ROM at $FFC0-$FFFF when enabled
@@ -150,8 +141,9 @@ public sealed class Spc700 {
 			_ram[0x00f2] = value;
 			return;
 		}
+
 		if (address == 0x00f3) {
-			_dsp?.WriteRegister(_ram[0x00f2], value);
+			Dsp?.WriteRegister(_ram[0x00f2], value);
 			_ram[0x00f3] = value;
 			return;
 		}
@@ -164,6 +156,7 @@ public sealed class Spc700 {
 				_ram[0x00f4] = 0;
 				_ram[0x00f5] = 0;
 			}
+
 			if ((value & 0x20) != 0) {
 				// Clear input ports 2-3
 				_ram[0x00f6] = 0;
@@ -185,7 +178,7 @@ public sealed class Spc700 {
 		WriteByte(address + 1, (byte)(value >> 8));
 	}
 
-	private byte FetchByte() => ReadByte(_pc++);
+	private byte FetchByte() => ReadByte(PC++);
 	private ushort FetchWord() {
 		byte lo = FetchByte();
 		byte hi = FetchByte();
@@ -193,7 +186,7 @@ public sealed class Spc700 {
 	}
 
 	// Direct page addressing
-	private int DirectPage => (_psw & 0x20) != 0 ? 0x100 : 0;
+	private int DirectPage => (PSW & 0x20) != 0 ? 0x100 : 0;
 	private int DpAddress(byte offset) => DirectPage + offset;
 
 	#endregion
@@ -201,13 +194,13 @@ public sealed class Spc700 {
 	#region Stack Operations
 
 	private void PushByte(byte value) {
-		WriteByte(0x100 + _sp, value);
-		_sp--;
+		WriteByte(0x100 + SP, value);
+		SP--;
 	}
 
 	private byte PopByte() {
-		_sp++;
-		return ReadByte(0x100 + _sp);
+		SP++;
+		return ReadByte(0x100 + SP);
 	}
 
 	private void PushWord(ushort value) {
@@ -225,12 +218,12 @@ public sealed class Spc700 {
 
 	#region Flag Helpers
 
-	private bool GetFlag(int bit) => (_psw & (1 << bit)) != 0;
+	private bool GetFlag(int bit) => (PSW & (1 << bit)) != 0;
 	private void SetFlag(int bit, bool value) {
 		if (value) {
-			_psw |= (byte)(1 << bit);
+			PSW |= (byte)(1 << bit);
 		} else {
-			_psw &= (byte)~(1 << bit);
+			PSW &= (byte)~(1 << bit);
 		}
 	}
 
@@ -260,7 +253,7 @@ public sealed class Spc700 {
 	private byte Adc(byte a, byte b) {
 		int result = a + b + (CarryFlag ? 1 : 0);
 		HalfCarryFlag = ((a & 0x0f) + (b & 0x0f) + (CarryFlag ? 1 : 0)) > 0x0f;
-		OverflowFlag = ((~(a ^ b) & (a ^ result)) & 0x80) != 0;
+		OverflowFlag = (~(a ^ b) & (a ^ result) & 0x80) != 0;
 		CarryFlag = result > 0xff;
 		byte r = (byte)result;
 		SetNZ(r);
@@ -270,7 +263,7 @@ public sealed class Spc700 {
 	private byte Sbc(byte a, byte b) {
 		int result = a - b - (CarryFlag ? 0 : 1);
 		HalfCarryFlag = ((a & 0x0f) - (b & 0x0f) - (CarryFlag ? 0 : 1)) < 0;
-		OverflowFlag = (((a ^ b) & (a ^ result)) & 0x80) != 0;
+		OverflowFlag = ((a ^ b) & (a ^ result) & 0x80) != 0;
 		CarryFlag = result >= 0;
 		byte r = (byte)result;
 		SetNZ(r);
@@ -721,51 +714,51 @@ public sealed class Spc700 {
 
 	#region MOV Instructions
 
-	private int Mov_A_Imm() { _a = FetchByte(); SetNZ(_a); return 2; }
-	private int Mov_A_IndX() { _a = ReadByte(DpAddress(_x)); SetNZ(_a); return 3; }
-	private int Mov_A_IndXInc() { _a = ReadByte(DpAddress(_x)); _x++; SetNZ(_a); return 4; }
-	private int Mov_A_Dp() { _a = ReadByte(DpAddress(FetchByte())); SetNZ(_a); return 3; }
-	private int Mov_A_DpX() { _a = ReadByte(DpAddress((byte)(FetchByte() + _x))); SetNZ(_a); return 4; }
-	private int Mov_A_Abs() { _a = ReadByte(FetchWord()); SetNZ(_a); return 4; }
-	private int Mov_A_AbsX() { _a = ReadByte(FetchWord() + _x); SetNZ(_a); return 5; }
-	private int Mov_A_AbsY() { _a = ReadByte(FetchWord() + _y); SetNZ(_a); return 5; }
-	private int Mov_A_IndDpX() { _a = ReadByte(ReadWord(DpAddress((byte)(FetchByte() + _x)))); SetNZ(_a); return 6; }
-	private int Mov_A_IndDpY() { _a = ReadByte(ReadWord(DpAddress(FetchByte())) + _y); SetNZ(_a); return 6; }
-	private int Mov_A_X() { _a = _x; SetNZ(_a); return 2; }
-	private int Mov_A_Y() { _a = _y; SetNZ(_a); return 2; }
+	private int Mov_A_Imm() { A = FetchByte(); SetNZ(A); return 2; }
+	private int Mov_A_IndX() { A = ReadByte(DpAddress(X)); SetNZ(A); return 3; }
+	private int Mov_A_IndXInc() { A = ReadByte(DpAddress(X)); X++; SetNZ(A); return 4; }
+	private int Mov_A_Dp() { A = ReadByte(DpAddress(FetchByte())); SetNZ(A); return 3; }
+	private int Mov_A_DpX() { A = ReadByte(DpAddress((byte)(FetchByte() + X))); SetNZ(A); return 4; }
+	private int Mov_A_Abs() { A = ReadByte(FetchWord()); SetNZ(A); return 4; }
+	private int Mov_A_AbsX() { A = ReadByte(FetchWord() + X); SetNZ(A); return 5; }
+	private int Mov_A_AbsY() { A = ReadByte(FetchWord() + Y); SetNZ(A); return 5; }
+	private int Mov_A_IndDpX() { A = ReadByte(ReadWord(DpAddress((byte)(FetchByte() + X)))); SetNZ(A); return 6; }
+	private int Mov_A_IndDpY() { A = ReadByte(ReadWord(DpAddress(FetchByte())) + Y); SetNZ(A); return 6; }
+	private int Mov_A_X() { A = X; SetNZ(A); return 2; }
+	private int Mov_A_Y() { A = Y; SetNZ(A); return 2; }
 
-	private int Mov_X_Imm() { _x = FetchByte(); SetNZ(_x); return 2; }
-	private int Mov_X_Dp() { _x = ReadByte(DpAddress(FetchByte())); SetNZ(_x); return 3; }
-	private int Mov_X_DpY() { _x = ReadByte(DpAddress((byte)(FetchByte() + _y))); SetNZ(_x); return 4; }
-	private int Mov_X_Abs() { _x = ReadByte(FetchWord()); SetNZ(_x); return 4; }
-	private int Mov_X_A() { _x = _a; SetNZ(_x); return 2; }
-	private int Mov_X_SP() { _x = _sp; SetNZ(_x); return 2; }
+	private int Mov_X_Imm() { X = FetchByte(); SetNZ(X); return 2; }
+	private int Mov_X_Dp() { X = ReadByte(DpAddress(FetchByte())); SetNZ(X); return 3; }
+	private int Mov_X_DpY() { X = ReadByte(DpAddress((byte)(FetchByte() + Y))); SetNZ(X); return 4; }
+	private int Mov_X_Abs() { X = ReadByte(FetchWord()); SetNZ(X); return 4; }
+	private int Mov_X_A() { X = A; SetNZ(X); return 2; }
+	private int Mov_X_SP() { X = SP; SetNZ(X); return 2; }
 
-	private int Mov_Y_Imm() { _y = FetchByte(); SetNZ(_y); return 2; }
-	private int Mov_Y_Dp() { _y = ReadByte(DpAddress(FetchByte())); SetNZ(_y); return 3; }
-	private int Mov_Y_DpX() { _y = ReadByte(DpAddress((byte)(FetchByte() + _x))); SetNZ(_y); return 4; }
-	private int Mov_Y_Abs() { _y = ReadByte(FetchWord()); SetNZ(_y); return 4; }
-	private int Mov_Y_A() { _y = _a; SetNZ(_y); return 2; }
+	private int Mov_Y_Imm() { Y = FetchByte(); SetNZ(Y); return 2; }
+	private int Mov_Y_Dp() { Y = ReadByte(DpAddress(FetchByte())); SetNZ(Y); return 3; }
+	private int Mov_Y_DpX() { Y = ReadByte(DpAddress((byte)(FetchByte() + X))); SetNZ(Y); return 4; }
+	private int Mov_Y_Abs() { Y = ReadByte(FetchWord()); SetNZ(Y); return 4; }
+	private int Mov_Y_A() { Y = A; SetNZ(Y); return 2; }
 
-	private int Mov_IndX_A() { WriteByte(DpAddress(_x), _a); return 4; }
-	private int Mov_IndXInc_A() { WriteByte(DpAddress(_x), _a); _x++; return 4; }
-	private int Mov_Dp_A() { WriteByte(DpAddress(FetchByte()), _a); return 4; }
-	private int Mov_DpX_A() { WriteByte(DpAddress((byte)(FetchByte() + _x)), _a); return 5; }
-	private int Mov_Abs_A() { WriteByte(FetchWord(), _a); return 5; }
-	private int Mov_AbsX_A() { WriteByte(FetchWord() + _x, _a); return 6; }
-	private int Mov_AbsY_A() { WriteByte(FetchWord() + _y, _a); return 6; }
-	private int Mov_IndDpX_A() { WriteByte(ReadWord(DpAddress((byte)(FetchByte() + _x))), _a); return 7; }
-	private int Mov_IndDpY_A() { WriteByte(ReadWord(DpAddress(FetchByte())) + _y, _a); return 7; }
+	private int Mov_IndX_A() { WriteByte(DpAddress(X), A); return 4; }
+	private int Mov_IndXInc_A() { WriteByte(DpAddress(X), A); X++; return 4; }
+	private int Mov_Dp_A() { WriteByte(DpAddress(FetchByte()), A); return 4; }
+	private int Mov_DpX_A() { WriteByte(DpAddress((byte)(FetchByte() + X)), A); return 5; }
+	private int Mov_Abs_A() { WriteByte(FetchWord(), A); return 5; }
+	private int Mov_AbsX_A() { WriteByte(FetchWord() + X, A); return 6; }
+	private int Mov_AbsY_A() { WriteByte(FetchWord() + Y, A); return 6; }
+	private int Mov_IndDpX_A() { WriteByte(ReadWord(DpAddress((byte)(FetchByte() + X))), A); return 7; }
+	private int Mov_IndDpY_A() { WriteByte(ReadWord(DpAddress(FetchByte())) + Y, A); return 7; }
 
-	private int Mov_Dp_X() { WriteByte(DpAddress(FetchByte()), _x); return 4; }
-	private int Mov_DpY_X() { WriteByte(DpAddress((byte)(FetchByte() + _y)), _x); return 5; }
-	private int Mov_Abs_X() { WriteByte(FetchWord(), _x); return 5; }
+	private int Mov_Dp_X() { WriteByte(DpAddress(FetchByte()), X); return 4; }
+	private int Mov_DpY_X() { WriteByte(DpAddress((byte)(FetchByte() + Y)), X); return 5; }
+	private int Mov_Abs_X() { WriteByte(FetchWord(), X); return 5; }
 
-	private int Mov_Dp_Y() { WriteByte(DpAddress(FetchByte()), _y); return 4; }
-	private int Mov_DpX_Y() { WriteByte(DpAddress((byte)(FetchByte() + _x)), _y); return 5; }
-	private int Mov_Abs_Y() { WriteByte(FetchWord(), _y); return 5; }
+	private int Mov_Dp_Y() { WriteByte(DpAddress(FetchByte()), Y); return 4; }
+	private int Mov_DpX_Y() { WriteByte(DpAddress((byte)(FetchByte() + X)), Y); return 5; }
+	private int Mov_Abs_Y() { WriteByte(FetchWord(), Y); return 5; }
 
-	private int Mov_SP_X() { _sp = _x; return 2; }
+	private int Mov_SP_X() { SP = X; return 2; }
 
 	private int Mov_Dp_Imm() { byte imm = FetchByte(); WriteByte(DpAddress(FetchByte()), imm); return 5; }
 	private int Mov_Dp_Dp() { byte src = ReadByte(DpAddress(FetchByte())); WriteByte(DpAddress(FetchByte()), src); return 5; }
@@ -774,109 +767,109 @@ public sealed class Spc700 {
 
 	#region ALU Instruction Implementations
 
-	private int Adc_A_Imm() { _a = Adc(_a, FetchByte()); return 2; }
-	private int Adc_A_IndX() { _a = Adc(_a, ReadByte(DpAddress(_x))); return 3; }
-	private int Adc_A_Dp() { _a = Adc(_a, ReadByte(DpAddress(FetchByte()))); return 3; }
-	private int Adc_A_DpX() { _a = Adc(_a, ReadByte(DpAddress((byte)(FetchByte() + _x)))); return 4; }
-	private int Adc_A_Abs() { _a = Adc(_a, ReadByte(FetchWord())); return 4; }
-	private int Adc_A_AbsX() { _a = Adc(_a, ReadByte(FetchWord() + _x)); return 5; }
-	private int Adc_A_AbsY() { _a = Adc(_a, ReadByte(FetchWord() + _y)); return 5; }
-	private int Adc_A_IndDpX() { _a = Adc(_a, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + _x))))); return 6; }
-	private int Adc_A_IndDpY() { _a = Adc(_a, ReadByte(ReadWord(DpAddress(FetchByte())) + _y)); return 6; }
+	private int Adc_A_Imm() { A = Adc(A, FetchByte()); return 2; }
+	private int Adc_A_IndX() { A = Adc(A, ReadByte(DpAddress(X))); return 3; }
+	private int Adc_A_Dp() { A = Adc(A, ReadByte(DpAddress(FetchByte()))); return 3; }
+	private int Adc_A_DpX() { A = Adc(A, ReadByte(DpAddress((byte)(FetchByte() + X)))); return 4; }
+	private int Adc_A_Abs() { A = Adc(A, ReadByte(FetchWord())); return 4; }
+	private int Adc_A_AbsX() { A = Adc(A, ReadByte(FetchWord() + X)); return 5; }
+	private int Adc_A_AbsY() { A = Adc(A, ReadByte(FetchWord() + Y)); return 5; }
+	private int Adc_A_IndDpX() { A = Adc(A, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + X))))); return 6; }
+	private int Adc_A_IndDpY() { A = Adc(A, ReadByte(ReadWord(DpAddress(FetchByte())) + Y)); return 6; }
 
-	private int Sbc_A_Imm() { _a = Sbc(_a, FetchByte()); return 2; }
-	private int Sbc_A_IndX() { _a = Sbc(_a, ReadByte(DpAddress(_x))); return 3; }
-	private int Sbc_A_Dp() { _a = Sbc(_a, ReadByte(DpAddress(FetchByte()))); return 3; }
-	private int Sbc_A_DpX() { _a = Sbc(_a, ReadByte(DpAddress((byte)(FetchByte() + _x)))); return 4; }
-	private int Sbc_A_Abs() { _a = Sbc(_a, ReadByte(FetchWord())); return 4; }
-	private int Sbc_A_AbsX() { _a = Sbc(_a, ReadByte(FetchWord() + _x)); return 5; }
-	private int Sbc_A_AbsY() { _a = Sbc(_a, ReadByte(FetchWord() + _y)); return 5; }
-	private int Sbc_A_IndDpX() { _a = Sbc(_a, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + _x))))); return 6; }
-	private int Sbc_A_IndDpY() { _a = Sbc(_a, ReadByte(ReadWord(DpAddress(FetchByte())) + _y)); return 6; }
+	private int Sbc_A_Imm() { A = Sbc(A, FetchByte()); return 2; }
+	private int Sbc_A_IndX() { A = Sbc(A, ReadByte(DpAddress(X))); return 3; }
+	private int Sbc_A_Dp() { A = Sbc(A, ReadByte(DpAddress(FetchByte()))); return 3; }
+	private int Sbc_A_DpX() { A = Sbc(A, ReadByte(DpAddress((byte)(FetchByte() + X)))); return 4; }
+	private int Sbc_A_Abs() { A = Sbc(A, ReadByte(FetchWord())); return 4; }
+	private int Sbc_A_AbsX() { A = Sbc(A, ReadByte(FetchWord() + X)); return 5; }
+	private int Sbc_A_AbsY() { A = Sbc(A, ReadByte(FetchWord() + Y)); return 5; }
+	private int Sbc_A_IndDpX() { A = Sbc(A, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + X))))); return 6; }
+	private int Sbc_A_IndDpY() { A = Sbc(A, ReadByte(ReadWord(DpAddress(FetchByte())) + Y)); return 6; }
 
-	private int Cmp_A_Imm() { Cmp(_a, FetchByte()); return 2; }
-	private int Cmp_A_IndX() { Cmp(_a, ReadByte(DpAddress(_x))); return 3; }
-	private int Cmp_A_Dp() { Cmp(_a, ReadByte(DpAddress(FetchByte()))); return 3; }
-	private int Cmp_A_DpX() { Cmp(_a, ReadByte(DpAddress((byte)(FetchByte() + _x)))); return 4; }
-	private int Cmp_A_Abs() { Cmp(_a, ReadByte(FetchWord())); return 4; }
-	private int Cmp_A_AbsX() { Cmp(_a, ReadByte(FetchWord() + _x)); return 5; }
-	private int Cmp_A_AbsY() { Cmp(_a, ReadByte(FetchWord() + _y)); return 5; }
-	private int Cmp_A_IndDpX() { Cmp(_a, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + _x))))); return 6; }
-	private int Cmp_A_IndDpY() { Cmp(_a, ReadByte(ReadWord(DpAddress(FetchByte())) + _y)); return 6; }
+	private int Cmp_A_Imm() { Cmp(A, FetchByte()); return 2; }
+	private int Cmp_A_IndX() { Cmp(A, ReadByte(DpAddress(X))); return 3; }
+	private int Cmp_A_Dp() { Cmp(A, ReadByte(DpAddress(FetchByte()))); return 3; }
+	private int Cmp_A_DpX() { Cmp(A, ReadByte(DpAddress((byte)(FetchByte() + X)))); return 4; }
+	private int Cmp_A_Abs() { Cmp(A, ReadByte(FetchWord())); return 4; }
+	private int Cmp_A_AbsX() { Cmp(A, ReadByte(FetchWord() + X)); return 5; }
+	private int Cmp_A_AbsY() { Cmp(A, ReadByte(FetchWord() + Y)); return 5; }
+	private int Cmp_A_IndDpX() { Cmp(A, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + X))))); return 6; }
+	private int Cmp_A_IndDpY() { Cmp(A, ReadByte(ReadWord(DpAddress(FetchByte())) + Y)); return 6; }
 
-	private int And_A_Imm() { _a = And(_a, FetchByte()); return 2; }
-	private int And_A_IndX() { _a = And(_a, ReadByte(DpAddress(_x))); return 3; }
-	private int And_A_Dp() { _a = And(_a, ReadByte(DpAddress(FetchByte()))); return 3; }
-	private int And_A_DpX() { _a = And(_a, ReadByte(DpAddress((byte)(FetchByte() + _x)))); return 4; }
-	private int And_A_Abs() { _a = And(_a, ReadByte(FetchWord())); return 4; }
-	private int And_A_AbsX() { _a = And(_a, ReadByte(FetchWord() + _x)); return 5; }
-	private int And_A_AbsY() { _a = And(_a, ReadByte(FetchWord() + _y)); return 5; }
-	private int And_A_IndDpX() { _a = And(_a, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + _x))))); return 6; }
-	private int And_A_IndDpY() { _a = And(_a, ReadByte(ReadWord(DpAddress(FetchByte())) + _y)); return 6; }
+	private int And_A_Imm() { A = And(A, FetchByte()); return 2; }
+	private int And_A_IndX() { A = And(A, ReadByte(DpAddress(X))); return 3; }
+	private int And_A_Dp() { A = And(A, ReadByte(DpAddress(FetchByte()))); return 3; }
+	private int And_A_DpX() { A = And(A, ReadByte(DpAddress((byte)(FetchByte() + X)))); return 4; }
+	private int And_A_Abs() { A = And(A, ReadByte(FetchWord())); return 4; }
+	private int And_A_AbsX() { A = And(A, ReadByte(FetchWord() + X)); return 5; }
+	private int And_A_AbsY() { A = And(A, ReadByte(FetchWord() + Y)); return 5; }
+	private int And_A_IndDpX() { A = And(A, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + X))))); return 6; }
+	private int And_A_IndDpY() { A = And(A, ReadByte(ReadWord(DpAddress(FetchByte())) + Y)); return 6; }
 
-	private int Or_A_Imm() { _a = Or(_a, FetchByte()); return 2; }
-	private int Or_A_IndX() { _a = Or(_a, ReadByte(DpAddress(_x))); return 3; }
-	private int Or_A_Dp() { _a = Or(_a, ReadByte(DpAddress(FetchByte()))); return 3; }
-	private int Or_A_DpX() { _a = Or(_a, ReadByte(DpAddress((byte)(FetchByte() + _x)))); return 4; }
-	private int Or_A_Abs() { _a = Or(_a, ReadByte(FetchWord())); return 4; }
-	private int Or_A_AbsX() { _a = Or(_a, ReadByte(FetchWord() + _x)); return 5; }
-	private int Or_A_AbsY() { _a = Or(_a, ReadByte(FetchWord() + _y)); return 5; }
-	private int Or_A_IndDpX() { _a = Or(_a, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + _x))))); return 6; }
-	private int Or_A_IndDpY() { _a = Or(_a, ReadByte(ReadWord(DpAddress(FetchByte())) + _y)); return 6; }
+	private int Or_A_Imm() { A = Or(A, FetchByte()); return 2; }
+	private int Or_A_IndX() { A = Or(A, ReadByte(DpAddress(X))); return 3; }
+	private int Or_A_Dp() { A = Or(A, ReadByte(DpAddress(FetchByte()))); return 3; }
+	private int Or_A_DpX() { A = Or(A, ReadByte(DpAddress((byte)(FetchByte() + X)))); return 4; }
+	private int Or_A_Abs() { A = Or(A, ReadByte(FetchWord())); return 4; }
+	private int Or_A_AbsX() { A = Or(A, ReadByte(FetchWord() + X)); return 5; }
+	private int Or_A_AbsY() { A = Or(A, ReadByte(FetchWord() + Y)); return 5; }
+	private int Or_A_IndDpX() { A = Or(A, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + X))))); return 6; }
+	private int Or_A_IndDpY() { A = Or(A, ReadByte(ReadWord(DpAddress(FetchByte())) + Y)); return 6; }
 
-	private int Eor_A_Imm() { _a = Eor(_a, FetchByte()); return 2; }
-	private int Eor_A_IndX() { _a = Eor(_a, ReadByte(DpAddress(_x))); return 3; }
-	private int Eor_A_Dp() { _a = Eor(_a, ReadByte(DpAddress(FetchByte()))); return 3; }
-	private int Eor_A_DpX() { _a = Eor(_a, ReadByte(DpAddress((byte)(FetchByte() + _x)))); return 4; }
-	private int Eor_A_Abs() { _a = Eor(_a, ReadByte(FetchWord())); return 4; }
-	private int Eor_A_AbsX() { _a = Eor(_a, ReadByte(FetchWord() + _x)); return 5; }
-	private int Eor_A_AbsY() { _a = Eor(_a, ReadByte(FetchWord() + _y)); return 5; }
-	private int Eor_A_IndDpX() { _a = Eor(_a, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + _x))))); return 6; }
-	private int Eor_A_IndDpY() { _a = Eor(_a, ReadByte(ReadWord(DpAddress(FetchByte())) + _y)); return 6; }
+	private int Eor_A_Imm() { A = Eor(A, FetchByte()); return 2; }
+	private int Eor_A_IndX() { A = Eor(A, ReadByte(DpAddress(X))); return 3; }
+	private int Eor_A_Dp() { A = Eor(A, ReadByte(DpAddress(FetchByte()))); return 3; }
+	private int Eor_A_DpX() { A = Eor(A, ReadByte(DpAddress((byte)(FetchByte() + X)))); return 4; }
+	private int Eor_A_Abs() { A = Eor(A, ReadByte(FetchWord())); return 4; }
+	private int Eor_A_AbsX() { A = Eor(A, ReadByte(FetchWord() + X)); return 5; }
+	private int Eor_A_AbsY() { A = Eor(A, ReadByte(FetchWord() + Y)); return 5; }
+	private int Eor_A_IndDpX() { A = Eor(A, ReadByte(ReadWord(DpAddress((byte)(FetchByte() + X))))); return 6; }
+	private int Eor_A_IndDpY() { A = Eor(A, ReadByte(ReadWord(DpAddress(FetchByte())) + Y)); return 6; }
 
-	private int Cmp_X_Imm() { Cmp(_x, FetchByte()); return 2; }
-	private int Cmp_X_Dp() { Cmp(_x, ReadByte(DpAddress(FetchByte()))); return 3; }
-	private int Cmp_X_Abs() { Cmp(_x, ReadByte(FetchWord())); return 4; }
-	private int Cmp_Y_Imm() { Cmp(_y, FetchByte()); return 2; }
-	private int Cmp_Y_Dp() { Cmp(_y, ReadByte(DpAddress(FetchByte()))); return 3; }
-	private int Cmp_Y_Abs() { Cmp(_y, ReadByte(FetchWord())); return 4; }
+	private int Cmp_X_Imm() { Cmp(X, FetchByte()); return 2; }
+	private int Cmp_X_Dp() { Cmp(X, ReadByte(DpAddress(FetchByte()))); return 3; }
+	private int Cmp_X_Abs() { Cmp(X, ReadByte(FetchWord())); return 4; }
+	private int Cmp_Y_Imm() { Cmp(Y, FetchByte()); return 2; }
+	private int Cmp_Y_Dp() { Cmp(Y, ReadByte(DpAddress(FetchByte()))); return 3; }
+	private int Cmp_Y_Abs() { Cmp(Y, ReadByte(FetchWord())); return 4; }
 
 	#endregion
 
 	#region Inc/Dec/Shift Instructions
 
-	private int Inc_A() { _a = Inc(_a); return 2; }
-	private int Inc_X() { _x = Inc(_x); return 2; }
-	private int Inc_Y() { _y = Inc(_y); return 2; }
+	private int Inc_A() { A = Inc(A); return 2; }
+	private int Inc_X() { X = Inc(X); return 2; }
+	private int Inc_Y() { Y = Inc(Y); return 2; }
 	private int Inc_Dp() { int addr = DpAddress(FetchByte()); WriteByte(addr, Inc(ReadByte(addr))); return 4; }
-	private int Inc_DpX() { int addr = DpAddress((byte)(FetchByte() + _x)); WriteByte(addr, Inc(ReadByte(addr))); return 5; }
+	private int Inc_DpX() { int addr = DpAddress((byte)(FetchByte() + X)); WriteByte(addr, Inc(ReadByte(addr))); return 5; }
 	private int Inc_Abs() { int addr = FetchWord(); WriteByte(addr, Inc(ReadByte(addr))); return 5; }
 
-	private int Dec_A() { _a = Dec(_a); return 2; }
-	private int Dec_X() { _x = Dec(_x); return 2; }
-	private int Dec_Y() { _y = Dec(_y); return 2; }
+	private int Dec_A() { A = Dec(A); return 2; }
+	private int Dec_X() { X = Dec(X); return 2; }
+	private int Dec_Y() { Y = Dec(Y); return 2; }
 	private int Dec_Dp() { int addr = DpAddress(FetchByte()); WriteByte(addr, Dec(ReadByte(addr))); return 4; }
-	private int Dec_DpX() { int addr = DpAddress((byte)(FetchByte() + _x)); WriteByte(addr, Dec(ReadByte(addr))); return 5; }
+	private int Dec_DpX() { int addr = DpAddress((byte)(FetchByte() + X)); WriteByte(addr, Dec(ReadByte(addr))); return 5; }
 	private int Dec_Abs() { int addr = FetchWord(); WriteByte(addr, Dec(ReadByte(addr))); return 5; }
 
-	private int Asl_A() { _a = Asl(_a); return 2; }
+	private int Asl_A() { A = Asl(A); return 2; }
 	private int Asl_Dp() { int addr = DpAddress(FetchByte()); WriteByte(addr, Asl(ReadByte(addr))); return 4; }
-	private int Asl_DpX() { int addr = DpAddress((byte)(FetchByte() + _x)); WriteByte(addr, Asl(ReadByte(addr))); return 5; }
+	private int Asl_DpX() { int addr = DpAddress((byte)(FetchByte() + X)); WriteByte(addr, Asl(ReadByte(addr))); return 5; }
 	private int Asl_Abs() { int addr = FetchWord(); WriteByte(addr, Asl(ReadByte(addr))); return 5; }
 
-	private int Lsr_A() { _a = Lsr(_a); return 2; }
+	private int Lsr_A() { A = Lsr(A); return 2; }
 	private int Lsr_Dp() { int addr = DpAddress(FetchByte()); WriteByte(addr, Lsr(ReadByte(addr))); return 4; }
-	private int Lsr_DpX() { int addr = DpAddress((byte)(FetchByte() + _x)); WriteByte(addr, Lsr(ReadByte(addr))); return 5; }
+	private int Lsr_DpX() { int addr = DpAddress((byte)(FetchByte() + X)); WriteByte(addr, Lsr(ReadByte(addr))); return 5; }
 	private int Lsr_Abs() { int addr = FetchWord(); WriteByte(addr, Lsr(ReadByte(addr))); return 5; }
 
-	private int Rol_A() { _a = Rol(_a); return 2; }
+	private int Rol_A() { A = Rol(A); return 2; }
 	private int Rol_Dp() { int addr = DpAddress(FetchByte()); WriteByte(addr, Rol(ReadByte(addr))); return 4; }
-	private int Rol_DpX() { int addr = DpAddress((byte)(FetchByte() + _x)); WriteByte(addr, Rol(ReadByte(addr))); return 5; }
+	private int Rol_DpX() { int addr = DpAddress((byte)(FetchByte() + X)); WriteByte(addr, Rol(ReadByte(addr))); return 5; }
 	private int Rol_Abs() { int addr = FetchWord(); WriteByte(addr, Rol(ReadByte(addr))); return 5; }
 
-	private int Ror_A() { _a = Ror(_a); return 2; }
+	private int Ror_A() { A = Ror(A); return 2; }
 	private int Ror_Dp() { int addr = DpAddress(FetchByte()); WriteByte(addr, Ror(ReadByte(addr))); return 4; }
-	private int Ror_DpX() { int addr = DpAddress((byte)(FetchByte() + _x)); WriteByte(addr, Ror(ReadByte(addr))); return 5; }
+	private int Ror_DpX() { int addr = DpAddress((byte)(FetchByte() + X)); WriteByte(addr, Ror(ReadByte(addr))); return 5; }
 	private int Ror_Abs() { int addr = FetchWord(); WriteByte(addr, Ror(ReadByte(addr))); return 5; }
 
 	#endregion
@@ -886,9 +879,10 @@ public sealed class Spc700 {
 	private int Branch(bool condition) {
 		sbyte offset = (sbyte)FetchByte();
 		if (condition) {
-			_pc = (ushort)(_pc + offset);
+			PC = (ushort)(PC + offset);
 			return 4;
 		}
+
 		return 2;
 	}
 
@@ -902,31 +896,31 @@ public sealed class Spc700 {
 	private int Bmi() => Branch(NegativeFlag);
 	private int Bpl() => Branch(!NegativeFlag);
 
-	private int Jmp_Abs() { _pc = FetchWord(); return 3; }
-	private int Jmp_AbsX() { _pc = (ushort)(FetchWord() + _x); return 6; }
+	private int Jmp_Abs() { PC = FetchWord(); return 3; }
+	private int Jmp_AbsX() { PC = (ushort)(FetchWord() + X); return 6; }
 
 	private int Call() {
 		ushort addr = FetchWord();
-		PushWord(_pc);
-		_pc = addr;
+		PushWord(PC);
+		PC = addr;
 		return 8;
 	}
 
-	private int Ret() { _pc = PopWord(); return 5; }
-	private int Reti() { _psw = PopByte(); _pc = PopWord(); return 6; }
+	private int Ret() { PC = PopWord(); return 5; }
+	private int Reti() { PSW = PopByte(); PC = PopWord(); return 6; }
 
 	#endregion
 
 	#region Stack Instructions
 
-	private int Push_A() { PushByte(_a); return 4; }
-	private int Push_X() { PushByte(_x); return 4; }
-	private int Push_Y() { PushByte(_y); return 4; }
-	private int Push_PSW() { PushByte(_psw); return 4; }
-	private int Pop_A() { _a = PopByte(); return 4; }
-	private int Pop_X() { _x = PopByte(); return 4; }
-	private int Pop_Y() { _y = PopByte(); return 4; }
-	private int Pop_PSW() { _psw = PopByte(); return 4; }
+	private int Push_A() { PushByte(A); return 4; }
+	private int Push_X() { PushByte(X); return 4; }
+	private int Push_Y() { PushByte(Y); return 4; }
+	private int Push_PSW() { PushByte(PSW); return 4; }
+	private int Pop_A() { A = PopByte(); return 4; }
+	private int Pop_X() { X = PopByte(); return 4; }
+	private int Pop_Y() { Y = PopByte(); return 4; }
+	private int Pop_PSW() { PSW = PopByte(); return 4; }
 
 	#endregion
 
@@ -975,9 +969,10 @@ public sealed class Spc700 {
 		byte dp = FetchByte();
 		sbyte offset = (sbyte)FetchByte();
 		if ((ReadByte(DpAddress(dp)) & (1 << bit)) != 0) {
-			_pc = (ushort)(_pc + offset);
+			PC = (ushort)(PC + offset);
 			return 7;
 		}
+
 		return 5;
 	}
 
@@ -985,9 +980,10 @@ public sealed class Spc700 {
 		byte dp = FetchByte();
 		sbyte offset = (sbyte)FetchByte();
 		if ((ReadByte(DpAddress(dp)) & (1 << bit)) == 0) {
-			_pc = (ushort)(_pc + offset);
+			PC = (ushort)(PC + offset);
 			return 7;
 		}
+
 		return 5;
 	}
 
@@ -1050,16 +1046,16 @@ public sealed class Spc700 {
 	private int Tset1_Abs() {
 		int addr = FetchWord();
 		byte val = ReadByte(addr);
-		SetNZ((byte)(_a - val));
-		WriteByte(addr, (byte)(val | _a));
+		SetNZ((byte)(A - val));
+		WriteByte(addr, (byte)(val | A));
 		return 6;
 	}
 
 	private int Tclr1_Abs() {
 		int addr = FetchWord();
 		byte val = ReadByte(addr);
-		SetNZ((byte)(_a - val));
-		WriteByte(addr, (byte)(val & ~_a));
+		SetNZ((byte)(A - val));
+		WriteByte(addr, (byte)(val & ~A));
 		return 6;
 	}
 
@@ -1068,28 +1064,29 @@ public sealed class Spc700 {
 	#region MUL/DIV Operations
 
 	private int Mul_YA() {
-		ushort result = (ushort)(_y * _a);
-		_a = (byte)(result & 0xff);
-		_y = (byte)(result >> 8);
-		SetNZ(_y);
+		ushort result = (ushort)(Y * A);
+		A = (byte)(result & 0xff);
+		Y = (byte)(result >> 8);
+		SetNZ(Y);
 		return 9;
 	}
 
 	private int Div_YA_X() {
-		if (_x == 0) {
+		if (X == 0) {
 			// Division by zero
-			_a = 0xff;
-			_y = 0xff;
+			A = 0xff;
+			Y = 0xff;
 			OverflowFlag = true;
 			HalfCarryFlag = true;
 		} else {
-			ushort ya = (ushort)((_y << 8) | _a);
-			OverflowFlag = _y >= _x;
-			HalfCarryFlag = (_y & 0x0f) >= (_x & 0x0f);
-			_a = (byte)(ya / _x);
-			_y = (byte)(ya % _x);
+			ushort ya = (ushort)((Y << 8) | A);
+			OverflowFlag = Y >= X;
+			HalfCarryFlag = (Y & 0x0f) >= (X & 0x0f);
+			A = (byte)(ya / X);
+			Y = (byte)(ya % X);
 		}
-		SetNZ(_a);
+
+		SetNZ(A);
 		return 12;
 	}
 
@@ -1097,8 +1094,8 @@ public sealed class Spc700 {
 
 	#region 16-bit Operations
 
-	private ushort GetYA() => (ushort)((_y << 8) | _a);
-	private void SetYA(ushort value) { _a = (byte)(value & 0xff); _y = (byte)(value >> 8); }
+	private ushort GetYA() => (ushort)((Y << 8) | A);
+	private void SetYA(ushort value) { A = (byte)(value & 0xff); Y = (byte)(value >> 8); }
 
 	private int Incw_Dp() {
 		int addr = DpAddress(FetchByte());
@@ -1121,7 +1118,7 @@ public sealed class Spc700 {
 		ushort mem = ReadWord(DpAddress(FetchByte()));
 		int result = ya + mem;
 		CarryFlag = result > 0xffff;
-		OverflowFlag = ((~(ya ^ mem) & (ya ^ result)) & 0x8000) != 0;
+		OverflowFlag = (~(ya ^ mem) & (ya ^ result) & 0x8000) != 0;
 		HalfCarryFlag = ((ya & 0x0fff) + (mem & 0x0fff)) > 0x0fff;
 		SetYA((ushort)result);
 		SetNZ16(GetYA());
@@ -1133,7 +1130,7 @@ public sealed class Spc700 {
 		ushort mem = ReadWord(DpAddress(FetchByte()));
 		int result = ya - mem;
 		CarryFlag = result >= 0;
-		OverflowFlag = (((ya ^ mem) & (ya ^ result)) & 0x8000) != 0;
+		OverflowFlag = ((ya ^ mem) & (ya ^ result) & 0x8000) != 0;
 		HalfCarryFlag = ((ya & 0x0fff) - (mem & 0x0fff)) >= 0;
 		SetYA((ushort)result);
 		SetNZ16(GetYA());
@@ -1165,27 +1162,31 @@ public sealed class Spc700 {
 	#region Decimal Adjust
 
 	private int Daa() {
-		if ((_a & 0x0f) > 9 || HalfCarryFlag) {
-			_a += 6;
-			if (_a < 6) CarryFlag = true;
+		if ((A & 0x0f) > 9 || HalfCarryFlag) {
+			A += 6;
+			if (A < 6) CarryFlag = true;
 		}
-		if (_a > 0x9f || CarryFlag) {
-			_a += 0x60;
+
+		if (A > 0x9f || CarryFlag) {
+			A += 0x60;
 			CarryFlag = true;
 		}
-		SetNZ(_a);
+
+		SetNZ(A);
 		return 3;
 	}
 
 	private int Das() {
-		if ((_a & 0x0f) > 9 || !HalfCarryFlag) {
-			_a -= 6;
+		if ((A & 0x0f) > 9 || !HalfCarryFlag) {
+			A -= 6;
 		}
-		if (_a > 0x9f || !CarryFlag) {
-			_a -= 0x60;
+
+		if (A > 0x9f || !CarryFlag) {
+			A -= 0x60;
 			CarryFlag = false;
 		}
-		SetNZ(_a);
+
+		SetNZ(A);
 		return 3;
 	}
 
@@ -1194,28 +1195,30 @@ public sealed class Spc700 {
 	#region Misc Instructions
 
 	private int Xcn_A() {
-		_a = (byte)((_a >> 4) | (_a << 4));
-		SetNZ(_a);
+		A = (byte)((A >> 4) | (A << 4));
+		SetNZ(A);
 		return 5;
 	}
 
 	private int Cbne_Dp() {
 		byte dp = FetchByte();
 		sbyte offset = (sbyte)FetchByte();
-		if (_a != ReadByte(DpAddress(dp))) {
-			_pc = (ushort)(_pc + offset);
+		if (A != ReadByte(DpAddress(dp))) {
+			PC = (ushort)(PC + offset);
 			return 7;
 		}
+
 		return 5;
 	}
 
 	private int Cbne_DpX() {
 		byte dp = FetchByte();
 		sbyte offset = (sbyte)FetchByte();
-		if (_a != ReadByte(DpAddress((byte)(dp + _x)))) {
-			_pc = (ushort)(_pc + offset);
+		if (A != ReadByte(DpAddress((byte)(dp + X)))) {
+			PC = (ushort)(PC + offset);
 			return 8;
 		}
+
 		return 6;
 	}
 
@@ -1226,39 +1229,41 @@ public sealed class Spc700 {
 		byte val = (byte)(ReadByte(addr) - 1);
 		WriteByte(addr, val);
 		if (val != 0) {
-			_pc = (ushort)(_pc + offset);
+			PC = (ushort)(PC + offset);
 			return 7;
 		}
+
 		return 5;
 	}
 
 	private int Dbnz_Y() {
 		sbyte offset = (sbyte)FetchByte();
-		_y--;
-		if (_y != 0) {
-			_pc = (ushort)(_pc + offset);
+		Y--;
+		if (Y != 0) {
+			PC = (ushort)(PC + offset);
 			return 6;
 		}
+
 		return 4;
 	}
 
 	private int Tcall(int n) {
-		PushWord(_pc);
-		_pc = ReadWord(0xffde - (n * 2));
+		PushWord(PC);
+		PC = ReadWord(0xffde - (n * 2));
 		return 8;
 	}
 
 	private int Pcall() {
 		byte page = FetchByte();
-		PushWord(_pc);
-		_pc = (ushort)(0xff00 | page);
+		PushWord(PC);
+		PC = (ushort)(0xff00 | page);
 		return 6;
 	}
 
 	private int Brk() {
-		PushWord(_pc);
-		PushByte(_psw);
-		_pc = ReadWord(0xffde);
+		PushWord(PC);
+		PushByte(PSW);
+		PC = ReadWord(0xffde);
 		BreakFlag = true;
 		InterruptFlag = false;
 		return 8;
@@ -1353,37 +1358,37 @@ public sealed class Spc700 {
 	}
 
 	private int Adc_IndX_IndY() {
-		byte val = Adc(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
-		WriteByte(DpAddress(_x), val);
+		byte val = Adc(ReadByte(DpAddress(X)), ReadByte(DpAddress(Y)));
+		WriteByte(DpAddress(X), val);
 		return 5;
 	}
 
 	private int Sbc_IndX_IndY() {
-		byte val = Sbc(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
-		WriteByte(DpAddress(_x), val);
+		byte val = Sbc(ReadByte(DpAddress(X)), ReadByte(DpAddress(Y)));
+		WriteByte(DpAddress(X), val);
 		return 5;
 	}
 
 	private int Cmp_IndX_IndY() {
-		Cmp(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
+		Cmp(ReadByte(DpAddress(X)), ReadByte(DpAddress(Y)));
 		return 5;
 	}
 
 	private int And_IndX_IndY() {
-		byte val = And(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
-		WriteByte(DpAddress(_x), val);
+		byte val = And(ReadByte(DpAddress(X)), ReadByte(DpAddress(Y)));
+		WriteByte(DpAddress(X), val);
 		return 5;
 	}
 
 	private int Or_IndX_IndY() {
-		byte val = Or(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
-		WriteByte(DpAddress(_x), val);
+		byte val = Or(ReadByte(DpAddress(X)), ReadByte(DpAddress(Y)));
+		WriteByte(DpAddress(X), val);
 		return 5;
 	}
 
 	private int Eor_IndX_IndY() {
-		byte val = Eor(ReadByte(DpAddress(_x)), ReadByte(DpAddress(_y)));
-		WriteByte(DpAddress(_x), val);
+		byte val = Eor(ReadByte(DpAddress(X)), ReadByte(DpAddress(Y)));
+		WriteByte(DpAddress(X), val);
 		return 5;
 	}
 

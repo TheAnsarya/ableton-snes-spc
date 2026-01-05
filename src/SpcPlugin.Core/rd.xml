@@ -2,18 +2,18 @@
   <assembly fullname="SpcPlugin.Core">
     <!-- Preserve all public types for native export -->
     <type fullname="SpcPlugin.Core.Interop.NativeExports" preserve="all" />
-    
+
     <!-- Preserve preset serialization types -->
     <type fullname="SpcPlugin.Core.Presets.SpcPreset" preserve="all" />
     <type fullname="SpcPlugin.Core.Presets.VoicePreset" preserve="all" />
     <type fullname="SpcPlugin.Core.Presets.DspPreset" preserve="all" />
     <type fullname="SpcPlugin.Core.Presets.MidiPreset" preserve="all" />
     <type fullname="SpcPlugin.Core.Presets.AdsrPreset" preserve="all" />
-    
+
     <!-- Preserve MIDI types -->
     <type fullname="SpcPlugin.Core.Midi.MidiEvent" preserve="all" />
     <type fullname="SpcPlugin.Core.Midi.MidiEventType" preserve="all" />
-    
+
     <!-- Preserve UI view models if using reflection -->
     <type fullname="SpcPlugin.Core.UI.*" preserve="all" />
   </assembly>

@@ -93,6 +93,7 @@ public class PresetManager {
 				if (voice.SourceOverride >= 0) {
 					_engine.Editor.SetVoiceSource(voice.VoiceIndex, (byte)voice.SourceOverride);
 				}
+
 				if (voice.AdsrOverride != null) {
 					_engine.Editor.SetVoiceAdsr(
 						voice.VoiceIndex,

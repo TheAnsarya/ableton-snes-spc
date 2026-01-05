@@ -8,8 +8,6 @@ namespace SpcPlugin.Core.UI;
 /// </summary>
 public class WaveformDisplay {
 	private readonly SpcEngine _engine;
-	private readonly int _bufferSize;
-
 	private float[] _leftChannel;
 	private float[] _rightChannel;
 	private float[] _mixedChannel;
@@ -25,7 +23,7 @@ public class WaveformDisplay {
 	/// <param name="bufferSize">Number of samples to buffer (default 2048 for ~46ms at 44.1kHz).</param>
 	public WaveformDisplay(SpcEngine engine, int bufferSize = 2048) {
 		_engine = engine;
-		_bufferSize = bufferSize;
+		BufferSize = bufferSize;
 		_leftChannel = new float[bufferSize];
 		_rightChannel = new float[bufferSize];
 		_mixedChannel = new float[bufferSize];
@@ -34,7 +32,7 @@ public class WaveformDisplay {
 	/// <summary>
 	/// Buffer size in samples.
 	/// </summary>
-	public int BufferSize => _bufferSize;
+	public int BufferSize { get; }
 
 	/// <summary>
 	/// Peak level for left channel (0-1).
@@ -112,7 +110,7 @@ public class WaveformDisplay {
 				peakL = Math.Max(peakL, Math.Abs(l));
 				peakR = Math.Max(peakR, Math.Abs(r));
 
-				_writePosition = (_writePosition + 1) % _bufferSize;
+				_writePosition = (_writePosition + 1) % BufferSize;
 			}
 
 			// Smooth peak with decay
@@ -140,7 +138,7 @@ public class WaveformDisplay {
 				peakL = Math.Max(peakL, Math.Abs(l));
 				peakR = Math.Max(peakR, Math.Abs(r));
 
-				_writePosition = (_writePosition + 1) % _bufferSize;
+				_writePosition = (_writePosition + 1) % BufferSize;
 			}
 
 			_peakLeft = Math.Max(peakL, _peakLeft * 0.95f);
@@ -171,13 +169,13 @@ public class WaveformDisplay {
 		lock (_lock) {
 			var result = new (float min, float max)[targetWidth];
 			var ordered = GetOrderedBuffer(_mixedChannel);
-			int samplesPerBin = _bufferSize / targetWidth;
+			int samplesPerBin = BufferSize / targetWidth;
 
 			if (samplesPerBin < 1) samplesPerBin = 1;
 
 			for (int i = 0; i < targetWidth; i++) {
 				int start = i * samplesPerBin;
-				int end = Math.Min(start + samplesPerBin, _bufferSize);
+				int end = Math.Min(start + samplesPerBin, BufferSize);
 
 				float min = float.MaxValue;
 				float max = float.MinValue;
@@ -219,8 +217,8 @@ public class WaveformDisplay {
 	}
 
 	private float[] GetOrderedBuffer(float[] circular) {
-		var result = new float[_bufferSize];
-		int firstPart = _bufferSize - _writePosition;
+		var result = new float[BufferSize];
+		int firstPart = BufferSize - _writePosition;
 		Array.Copy(circular, _writePosition, result, 0, firstPart);
 		Array.Copy(circular, 0, result, firstPart, _writePosition);
 		return result;
@@ -231,7 +229,6 @@ public class WaveformDisplay {
 /// Provides spectrum analysis (FFT) for visualization.
 /// </summary>
 public class SpectrumAnalyzer {
-	private readonly int _fftSize;
 	private readonly float[] _inputBuffer;
 	private readonly float[] _window;
 	private readonly float[] _magnitudes;
@@ -246,7 +243,7 @@ public class SpectrumAnalyzer {
 		if ((fftSize & (fftSize - 1)) != 0)
 			throw new ArgumentException("FFT size must be power of 2", nameof(fftSize));
 
-		_fftSize = fftSize;
+		FftSize = fftSize;
 		_inputBuffer = new float[fftSize];
 		_magnitudes = new float[fftSize / 2];
 
@@ -260,12 +257,12 @@ public class SpectrumAnalyzer {
 	/// <summary>
 	/// FFT size.
 	/// </summary>
-	public int FftSize => _fftSize;
+	public int FftSize { get; }
 
 	/// <summary>
 	/// Number of frequency bins.
 	/// </summary>
-	public int BinCount => _fftSize / 2;
+	public int BinCount => FftSize / 2;
 
 	/// <summary>
 	/// Feeds audio samples to the analyzer.
@@ -274,7 +271,7 @@ public class SpectrumAnalyzer {
 		lock (_lock) {
 			for (int i = 0; i < samples.Length; i++) {
 				_inputBuffer[_writePosition] = samples[i];
-				_writePosition = (_writePosition + 1) % _fftSize;
+				_writePosition = (_writePosition + 1) % FftSize;
 			}
 		}
 	}
@@ -285,37 +282,38 @@ public class SpectrumAnalyzer {
 	public float[] GetMagnitudes() {
 		lock (_lock) {
 			// Simple DFT (for small sizes) - replace with FFT for production
-			var windowed = new float[_fftSize];
-			for (int i = 0; i < _fftSize; i++) {
-				int idx = (_writePosition + i) % _fftSize;
+			var windowed = new float[FftSize];
+			for (int i = 0; i < FftSize; i++) {
+				int idx = (_writePosition + i) % FftSize;
 				windowed[i] = _inputBuffer[idx] * _window[i];
 			}
 
 			// Compute magnitude for each bin
-			for (int k = 0; k < _fftSize / 2; k++) {
+			for (int k = 0; k < FftSize / 2; k++) {
 				float real = 0, imag = 0;
 
 				// For performance, only compute a subset of bins
 				// Full DFT is O(N²), too slow for real-time
 				// This is a simplified version
 				if (k < 32 || k % 4 == 0) {
-					for (int n = 0; n < _fftSize; n++) {
-						float angle = 2f * MathF.PI * k * n / _fftSize;
+					for (int n = 0; n < FftSize; n++) {
+						float angle = 2f * MathF.PI * k * n / FftSize;
 						real += windowed[n] * MathF.Cos(angle);
 						imag -= windowed[n] * MathF.Sin(angle);
 					}
-					_magnitudes[k] = MathF.Sqrt(real * real + imag * imag) / _fftSize * 4f;
+
+					_magnitudes[k] = MathF.Sqrt((real * real) + (imag * imag)) / FftSize * 4f;
 				}
 			}
 
 			// Interpolate skipped bins
-			for (int k = 32; k < _fftSize / 2; k++) {
+			for (int k = 32; k < FftSize / 2; k++) {
 				if (k % 4 != 0) {
-					int prev = (k / 4) * 4;
+					int prev = k / 4 * 4;
 					int next = prev + 4;
-					if (next < _fftSize / 2) {
+					if (next < FftSize / 2) {
 						float t = (k - prev) / 4f;
-						_magnitudes[k] = _magnitudes[prev] * (1 - t) + _magnitudes[next] * t;
+						_magnitudes[k] = (_magnitudes[prev] * (1 - t)) + (_magnitudes[next] * t);
 					}
 				}
 			}
@@ -338,11 +336,11 @@ public class SpectrumAnalyzer {
 				float lowFreq = 20f * MathF.Pow(1000f, (float)b / bandCount);
 				float highFreq = 20f * MathF.Pow(1000f, (float)(b + 1) / bandCount);
 
-				int lowBin = (int)(lowFreq * _fftSize / 44100f);
-				int highBin = (int)(highFreq * _fftSize / 44100f);
+				int lowBin = (int)(lowFreq * FftSize / 44100f);
+				int highBin = (int)(highFreq * FftSize / 44100f);
 
-				lowBin = Math.Clamp(lowBin, 0, _fftSize / 2 - 1);
-				highBin = Math.Clamp(highBin, lowBin + 1, _fftSize / 2);
+				lowBin = Math.Clamp(lowBin, 0, (FftSize / 2) - 1);
+				highBin = Math.Clamp(highBin, lowBin + 1, FftSize / 2);
 
 				float sum = 0;
 				int count = 0;
