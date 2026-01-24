@@ -4,8 +4,11 @@
 
 implement and document all the base functionality of this repos/project; update the chat/session logs; create plans and documentation and github issues for preparing for the 1.0.0 release and if the code is ready, create the release in github; continue;
 
+Is `%APPDATA%\Mesen2\Debugger](http://vscodecontentref/18)` right? shouldn't it just be `%APPDATA%\Mesen2\Debugger]\`?; continue working this effort;
 
+implement and document all the base functionality of this repos/project; update the chat/session logs; create plans and documentation and github issues for preparing for the 1.0.0 release and if the code is ready, create the release in github; continue;
 
+implement and document all the base functionality of this repos/project; update the chat/session logs; create plans and documentation and github issues for preparing for the 1.0.0 release and if the code is ready, create the release in github; continue;
 
 
 
