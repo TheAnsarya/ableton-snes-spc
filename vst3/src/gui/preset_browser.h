@@ -7,6 +7,7 @@
 #include "vstgui/uidescription/iviewcreator.h"
 #include "vstgui/uidescription/detail/uiviewcreatorattributes.h"
 #include "../spc_controller.h"
+#include "midi_learn.h"
 #include <vector>
 #include <string>
 #include <functional>
@@ -79,7 +80,7 @@ protected:
 	void draw(VSTGUI::CDrawContext* context) override;
 	VSTGUI::CMouseEventResult onMouseDown(VSTGUI::CPoint& where, const VSTGUI::CButtonState& buttons) override;
 	VSTGUI::CMouseEventResult onMouseMoved(VSTGUI::CPoint& where, const VSTGUI::CButtonState& buttons) override;
-	bool onWheel(const VSTGUI::CPoint& where, const VSTGUI::CMouseWheelAxis& axis, const float& distance, const VSTGUI::CButtonState& buttons) override;
+	void onMouseWheelEvent(VSTGUI::MouseWheelEvent& event) override;
 
 private:
 	SpcController* controller_ = nullptr;

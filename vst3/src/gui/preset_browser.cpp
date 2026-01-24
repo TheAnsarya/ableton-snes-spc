@@ -1,4 +1,7 @@
 #include "preset_browser.h"
+#include "vstgui/lib/cdrawcontext.h"
+#include "vstgui/lib/events.h"
+#include "vstgui/uidescription/uiviewfactory.h"
 #include "vstgui/uidescription/uiviewcreator.h"
 #include <algorithm>
 #include <cctype>
@@ -315,8 +318,7 @@ void PresetBrowser::drawPresetItem(VSTGUI::CDrawContext* context, const VSTGUI::
 
 	// Separator line
 	context->setFrameColor(VSTGUI::CColor(50, 50, 50));
-	context->moveTo(VSTGUI::CPoint(rect.left, rect.bottom - 1));
-	context->lineTo(VSTGUI::CPoint(rect.right, rect.bottom - 1));
+	context->drawLine(VSTGUI::CPoint(rect.left, rect.bottom - 1), VSTGUI::CPoint(rect.right, rect.bottom - 1));
 }
 
 VSTGUI::CMouseEventResult PresetBrowser::onMouseDown(VSTGUI::CPoint& where, const VSTGUI::CButtonState& buttons) {
@@ -354,14 +356,15 @@ VSTGUI::CMouseEventResult PresetBrowser::onMouseMoved(VSTGUI::CPoint& where, con
 	return CViewContainer::onMouseMoved(where, buttons);
 }
 
-bool PresetBrowser::onWheel(const VSTGUI::CPoint& where, const VSTGUI::CMouseWheelAxis& axis, const float& distance, const VSTGUI::CButtonState& buttons) {
-	if (axis == VSTGUI::kMouseWheelAxisY) {
-		scrollOffset_ -= distance * itemHeight_ * 3;
+void PresetBrowser::onMouseWheelEvent(VSTGUI::MouseWheelEvent& event) {
+	if (event.deltaY != 0) {
+		scrollOffset_ -= event.deltaY * itemHeight_ * 3;
 		clampScrollOffset();
 		invalid();
-		return true;
+		event.consumed = true;
+		return;
 	}
-	return CViewContainer::onWheel(where, axis, distance, buttons);
+	CViewContainer::onMouseWheelEvent(event);
 }
 
 size_t PresetBrowser::hitTest(const VSTGUI::CPoint& point) {
@@ -395,8 +398,8 @@ bool PresetBrowser::hitTestScrollbar(const VSTGUI::CPoint& point) {
 }
 
 float PresetBrowser::getMaxScrollOffset() const {
-	float totalHeight = filteredPresets_.size() * itemHeight_;
-	float visibleHeight = getViewSize().getHeight();
+	float totalHeight = static_cast<float>(filteredPresets_.size()) * itemHeight_;
+	float visibleHeight = static_cast<float>(getViewSize().getHeight());
 	return std::max(0.0f, totalHeight - visibleHeight);
 }
 
@@ -413,9 +416,9 @@ void PresetBrowser::drawScrollbar(VSTGUI::CDrawContext* context, const VSTGUI::C
 	float maxScroll = getMaxScrollOffset();
 	if (maxScroll <= 0) return;
 
-	float totalHeight = filteredPresets_.size() * itemHeight_;
-	float visibleRatio = rect.getHeight() / totalHeight;
-	float thumbHeight = std::max(20.0f, rect.getHeight() * visibleRatio);
+	float totalHeight = static_cast<float>(filteredPresets_.size()) * itemHeight_;
+	float visibleRatio = static_cast<float>(rect.getHeight()) / totalHeight;
+	float thumbHeight = std::max(20.0f, static_cast<float>(rect.getHeight()) * visibleRatio);
 
 	float scrollRatio = scrollOffset_ / maxScroll;
 	float thumbTop = rect.top + scrollRatio * (rect.getHeight() - thumbHeight);

@@ -1,5 +1,6 @@
 #include "view_switcher.h"
-#include "vstgui/uidescription/uiviewcreator.h"
+#include "vstgui/uidescription/uiviewfactory.h"
+#include "vstgui/lib/ccolor.h"
 
 namespace SnesSpc {
 

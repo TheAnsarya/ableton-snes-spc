@@ -12,6 +12,7 @@ implement and document all the base functionality of this repos/project; update 
 
 Complete all the issues and todolists and update them and documentation and chat/session logs, and plans, to make this plugin complete, create docs and issues, and work towards the next release; continue;
 
+continue working this repos and project for a while;
 
 
 

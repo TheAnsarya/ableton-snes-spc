@@ -1,4 +1,5 @@
 #include "keyboard_handler.h"
+#include "midi_learn.h"
 #include "../spc_params.h"
 
 namespace SnesSpc {
@@ -36,10 +37,10 @@ void KeyboardHandler::registerShortcut(VSTGUI::VirtualKey key, VSTGUI::Modifiers
 }
 
 //------------------------------------------------------------------------
-VSTGUI::KeyboardEventConsumeState KeyboardHandler::onKeyboardEvent(const VSTGUI::KeyboardEvent& event, VSTGUI::CFrame* frame) {
+void KeyboardHandler::onKeyboardEvent(VSTGUI::KeyboardEvent& event, VSTGUI::CFrame* frame) {
 	// Only handle key down events
 	if (event.type != VSTGUI::EventType::KeyDown) {
-		return VSTGUI::KeyboardEventConsumeState::NotConsumed;
+		return;
 	}
 
 	// Check for character-based shortcuts
@@ -49,16 +50,20 @@ VSTGUI::KeyboardEventConsumeState KeyboardHandler::onKeyboardEvent(const VSTGUI:
 		switch (c) {
 			case ' ':
 				togglePlayPause();
-				return VSTGUI::KeyboardEventConsumeState::Consumed;
+				event.consumed = true;
+				return;
 			case 'l':
 				toggleLoop();
-				return VSTGUI::KeyboardEventConsumeState::Consumed;
+				event.consumed = true;
+				return;
 			case 'm':
 				muteAll();
-				return VSTGUI::KeyboardEventConsumeState::Consumed;
+				event.consumed = true;
+				return;
 			case 'n':
 				soloNone();
-				return VSTGUI::KeyboardEventConsumeState::Consumed;
+				event.consumed = true;
+				return;
 			case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': {
 				// Toggle voice mute (1-8)
@@ -70,7 +75,8 @@ VSTGUI::KeyboardEventConsumeState KeyboardHandler::onKeyboardEvent(const VSTGUI:
 						param->setNormalized(current > 0.5 ? 0.0 : 1.0);
 					}
 				}
-				return VSTGUI::KeyboardEventConsumeState::Consumed;
+				event.consumed = true;
+				return;
 			}
 		}
 	}
@@ -79,19 +85,22 @@ VSTGUI::KeyboardEventConsumeState KeyboardHandler::onKeyboardEvent(const VSTGUI:
 	switch (event.virt) {
 		case VSTGUI::VirtualKey::Escape:
 			stopPlayback();
-			return VSTGUI::KeyboardEventConsumeState::Consumed;
+			event.consumed = true;
+			return;
 
 		case VSTGUI::VirtualKey::Up:
 			if (event.modifiers.empty()) {
 				increaseVolume();
-				return VSTGUI::KeyboardEventConsumeState::Consumed;
+				event.consumed = true;
+				return;
 			}
 			break;
 
 		case VSTGUI::VirtualKey::Down:
 			if (event.modifiers.empty()) {
 				decreaseVolume();
-				return VSTGUI::KeyboardEventConsumeState::Consumed;
+				event.consumed = true;
+				return;
 			}
 			break;
 
@@ -103,13 +112,12 @@ VSTGUI::KeyboardEventConsumeState KeyboardHandler::onKeyboardEvent(const VSTGUI:
 					param->setNormalized(0.0);
 				}
 			}
-			return VSTGUI::KeyboardEventConsumeState::Consumed;
+			event.consumed = true;
+			return;
 
 		default:
 			break;
 	}
-
-	return VSTGUI::KeyboardEventConsumeState::NotConsumed;
 }
 
 //------------------------------------------------------------------------

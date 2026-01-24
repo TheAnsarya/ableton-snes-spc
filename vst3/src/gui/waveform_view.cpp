@@ -1,5 +1,8 @@
 #include "waveform_view.h"
+#include "vstgui/uidescription/uiviewfactory.h"
 #include "vstgui/uidescription/uiviewcreator.h"
+#include "vstgui/uidescription/uiattributes.h"
+#include "vstgui/lib/cgraphicspath.h"
 #include <algorithm>
 #include <cmath>
 
@@ -109,19 +112,16 @@ void WaveformView::drawGrid(VSTGUI::CDrawContext* context, const VSTGUI::CRect& 
 	context->setLineWidth(1);
 
 	// Horizontal center line
-	float centerY = rect.top + rect.getHeight() / 2;
-	context->moveTo(VSTGUI::CPoint(rect.left, centerY));
-	context->lineTo(VSTGUI::CPoint(rect.right, centerY));
+	VSTGUI::CCoord centerY = rect.top + rect.getHeight() / 2;
+	context->drawLine(VSTGUI::CPoint(rect.left, centerY), VSTGUI::CPoint(rect.right, centerY));
 
 	// Quarter lines (for +/- 0.5)
 	context->setFrameColor(VSTGUI::CColor(50, 50, 50));
-	float quarterY = rect.top + rect.getHeight() / 4;
-	context->moveTo(VSTGUI::CPoint(rect.left, quarterY));
-	context->lineTo(VSTGUI::CPoint(rect.right, quarterY));
+	VSTGUI::CCoord quarterY = rect.top + rect.getHeight() / 4;
+	context->drawLine(VSTGUI::CPoint(rect.left, quarterY), VSTGUI::CPoint(rect.right, quarterY));
 
 	quarterY = rect.top + rect.getHeight() * 3 / 4;
-	context->moveTo(VSTGUI::CPoint(rect.left, quarterY));
-	context->lineTo(VSTGUI::CPoint(rect.right, quarterY));
+	context->drawLine(VSTGUI::CPoint(rect.left, quarterY), VSTGUI::CPoint(rect.right, quarterY));
 }
 
 //------------------------------------------------------------------------
@@ -282,12 +282,12 @@ void WaveformView::drawSelection(VSTGUI::CDrawContext* context, const VSTGUI::CR
 
 	if (waveformLeft_.empty() || !hasSelection()) return;
 
-	const float width = static_cast<float>(rect.getWidth());
+	const VSTGUI::CCoord width = rect.getWidth();
 	const size_t totalSamples = waveformLeft_.size();
 
 	// Convert sample indices to pixel positions
-	float startX = rect.left + (selectionStart_ / static_cast<float>(totalSamples)) * width;
-	float endX = rect.left + (selectionEnd_ / static_cast<float>(totalSamples)) * width;
+	VSTGUI::CCoord startX = rect.left + (selectionStart_ / static_cast<VSTGUI::CCoord>(totalSamples)) * width;
+	VSTGUI::CCoord endX = rect.left + (selectionEnd_ / static_cast<VSTGUI::CCoord>(totalSamples)) * width;
 
 	// Draw selection rectangle
 	context->setFillColor(selectionColor_);
@@ -297,10 +297,8 @@ void WaveformView::drawSelection(VSTGUI::CDrawContext* context, const VSTGUI::CR
 	// Draw selection borders
 	context->setFrameColor(waveformColor_);
 	context->setLineWidth(1);
-	context->moveTo(VSTGUI::CPoint(startX, rect.top));
-	context->lineTo(VSTGUI::CPoint(startX, rect.bottom));
-	context->moveTo(VSTGUI::CPoint(endX, rect.top));
-	context->lineTo(VSTGUI::CPoint(endX, rect.bottom));
+	context->drawLine(VSTGUI::CPoint(startX, rect.top), VSTGUI::CPoint(startX, rect.bottom));
+	context->drawLine(VSTGUI::CPoint(endX, rect.top), VSTGUI::CPoint(endX, rect.bottom));
 }
 
 //------------------------------------------------------------------------

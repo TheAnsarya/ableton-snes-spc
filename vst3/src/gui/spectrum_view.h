@@ -19,6 +19,10 @@ public:
 	explicit SpectrumView(const VSTGUI::CRect& size);
 	~SpectrumView() override = default;
 
+	// Non-copyable (contains mutex)
+	SpectrumView(const SpectrumView&) = delete;
+	SpectrumView& operator=(const SpectrumView&) = delete;
+
 	// CView overrides
 	void draw(VSTGUI::CDrawContext* context) override;
 
@@ -41,7 +45,7 @@ public:
 	void setShowPeaks(bool show) { showPeaks_ = show; }
 	void setLogScale(bool log) { logScale_ = log; }
 
-	CLASS_METHODS(SpectrumView, CView)
+	// No CLASS_METHODS - class is non-copyable due to mutex
 
 protected:
 	void computeFFT();

@@ -5,6 +5,7 @@
 #include "keyboard_handler.h"
 #include "preset_browser.h"
 #include "view_switcher.h"
+#include "midi_learn.h"
 #endif
 #include "../spc_params.h"
 #include <algorithm>

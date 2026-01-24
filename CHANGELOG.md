@@ -14,7 +14,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Real-time parameter automation recording
 - Echo/reverb visual editor
 - Preset system with bank management
-- Custom view components for visualizers
+
+## [0.3.0] - 2026-01-25
+
+### Added
+
+#### Custom View Components
+- **WaveformView**: Real-time audio waveform visualization
+  - Time-domain waveform display
+  - BRR sample block visualization mode
+  - Zoom and scroll support
+  - Selection highlighting for loop points
+  - Configurable colors (background, waveform, grid)
+
+- **SpectrumView**: FFT-based frequency spectrum analyzer
+  - 32-band frequency visualization
+  - Peak hold indicators
+  - Logarithmic scale option
+  - Configurable decay rate and smoothing
+  - Cooley-Tukey radix-2 FFT implementation
+
+- **PresetBrowser**: SPC file browser panel
+  - Directory scanning for .spc files
+  - Search/filter functionality
+  - Sorting by name, game, artist
+  - Double-click to load presets
+  - Scrollbar for large lists
+
+- **ViewSwitcher**: Panel-switching container
+  - Tab-like view management
+  - Parameter-driven view selection
+
+- **KeyboardHandler**: Keyboard shortcuts
+  - Space for Play/Pause
+  - Escape for Stop
+  - Arrow keys for volume control
+  - Customizable key bindings
+
+- **MidiLearnHandler**: MIDI CC mapping system
+  - MIDI learn mode for parameter assignment
+  - Save/load mapping presets
+  - Multi-channel support
+
+### Changed
+- Full VSTGUI 4.x API compatibility
+  - Updated IKeyboardHook interface signature
+  - Replaced deprecated moveTo/lineTo with drawLine
+  - Updated onWheel to onMouseWheelEvent
+  - Fixed UIViewFactory registration includes
+  - Resolved template instantiation for non-copyable classes
+
+### Fixed
+- Circular dependency between spc_controller.h and midi_learn.h
+- Missing include for IControlListener interface
+- CColor type definition in view_switcher.cpp
+- UIAttributes incomplete type in view factories
+- MouseWheelEvent incomplete type in preset_browser
+
+### Technical Notes
+- Build with `-DENABLE_CUSTOM_VIEWS=ON` (default) for full GUI
+- Build with `-DENABLE_CUSTOM_VIEWS=OFF` for minimal GUI without custom views
 
 ## [0.2.0] - 2026-01-24
 

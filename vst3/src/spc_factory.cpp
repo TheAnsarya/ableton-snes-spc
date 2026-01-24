@@ -1,11 +1,14 @@
 #include "public.sdk/source/main/pluginfactory.h"
 #include "spc_processor.h"
 #include "spc_controller.h"
+#if ENABLE_CUSTOM_VIEWS
+#include "gui/midi_learn.h"
+#endif
 #include "spc_ids.h"
 
-#define PLUGIN_VERSION_STRING "0.1.0"
+#define PLUGIN_VERSION_STRING "0.3.0"
 #define PLUGIN_VERSION_MAJOR 0
-#define PLUGIN_VERSION_MINOR 1
+#define PLUGIN_VERSION_MINOR 3
 #define PLUGIN_VERSION_PATCH 0
 
 BEGIN_FACTORY_DEF("SNES SPC Plugin",

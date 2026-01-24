@@ -11,7 +11,7 @@
 namespace SnesSpc {
 
 #if ENABLE_CUSTOM_VIEWS
-// Forward declaration
+// Forward declaration - full definition in midi_learn.h
 class MidiLearnHandler;
 #endif
 

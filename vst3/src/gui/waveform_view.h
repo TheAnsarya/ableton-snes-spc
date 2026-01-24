@@ -18,6 +18,10 @@ public:
 	explicit WaveformView(const VSTGUI::CRect& size);
 	~WaveformView() override = default;
 
+	// Non-copyable (contains mutex)
+	WaveformView(const WaveformView&) = delete;
+	WaveformView& operator=(const WaveformView&) = delete;
+
 	// CView overrides
 	void draw(VSTGUI::CDrawContext* context) override;
 
@@ -57,7 +61,7 @@ public:
 	// BRR visualization
 	void setBrrBlockData(const std::vector<uint8_t>& brrData);
 
-	CLASS_METHODS(WaveformView, CView)
+	// No CLASS_METHODS - class is non-copyable due to mutex
 
 protected:
 	void drawWaveform(VSTGUI::CDrawContext* context, const VSTGUI::CRect& rect);

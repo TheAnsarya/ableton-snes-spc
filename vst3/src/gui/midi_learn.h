@@ -1,7 +1,6 @@
 #pragma once
 
 #include "vstgui/lib/controls/ccontrol.h"
-#include "../spc_controller.h"
 #include <map>
 #include <functional>
 #include <mutex>
@@ -9,6 +8,9 @@
 #include <string>
 
 namespace SnesSpc {
+
+// Forward declaration to break circular dependency
+class SpcController;
 
 //------------------------------------------------------------------------
 // MidiMapping - Represents a single MIDI CC to parameter mapping

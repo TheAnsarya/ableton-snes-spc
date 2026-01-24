@@ -16,8 +16,8 @@ public:
 	explicit KeyboardHandler(SpcController* controller);
 	~KeyboardHandler() override = default;
 
-	// IKeyboardHook
-	VSTGUI::KeyboardEventConsumeState onKeyboardEvent(const VSTGUI::KeyboardEvent& event, VSTGUI::CFrame* frame) override;
+	// IKeyboardHook (VSTGUI 4.x API)
+	void onKeyboardEvent(VSTGUI::KeyboardEvent& event, VSTGUI::CFrame* frame) override;
 
 	// Register custom shortcuts
 	using ShortcutCallback = std::function<void()>;

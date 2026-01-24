@@ -1,4 +1,5 @@
 #include "midi_learn.h"
+#include "../spc_controller.h"
 #include "vstgui/lib/cdrawcontext.h"
 #include "vstgui/lib/ccolor.h"
 #include <fstream>

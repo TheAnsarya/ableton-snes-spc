@@ -1,4 +1,5 @@
 #include "spectrum_view.h"
+#include "vstgui/uidescription/uiviewfactory.h"
 #include "vstgui/uidescription/uiviewcreator.h"
 #include <algorithm>
 #include <numbers>
@@ -146,17 +147,15 @@ void SpectrumView::drawGrid(VSTGUI::CDrawContext* context, const VSTGUI::CRect& 
 	// Horizontal lines at -6dB, -12dB, -18dB, -24dB
 	float heights[] = { 0.5f, 0.25f, 0.125f, 0.0625f };
 	for (float h : heights) {
-		float y = rect.bottom - h * rect.getHeight();
-		context->moveTo(VSTGUI::CPoint(rect.left, y));
-		context->lineTo(VSTGUI::CPoint(rect.right, y));
+		VSTGUI::CCoord y = rect.bottom - h * rect.getHeight();
+		context->drawLine(VSTGUI::CPoint(rect.left, y), VSTGUI::CPoint(rect.right, y));
 	}
 
 	// Vertical lines at octave boundaries (approximately)
 	int divisions = 8;
 	for (int i = 1; i < divisions; i++) {
-		float x = rect.left + (rect.getWidth() * i / divisions);
-		context->moveTo(VSTGUI::CPoint(x, rect.top));
-		context->lineTo(VSTGUI::CPoint(x, rect.bottom));
+		VSTGUI::CCoord x = rect.left + (rect.getWidth() * i / divisions);
+		context->drawLine(VSTGUI::CPoint(x, rect.top), VSTGUI::CPoint(x, rect.bottom));
 	}
 }
 
@@ -205,12 +204,11 @@ void SpectrumView::drawBars(VSTGUI::CDrawContext* context, const VSTGUI::CRect& 
 			if (peakValue > threshold) {
 				const float peakDb = 20.0f * std::log10(peakValue);
 				const float peakNorm = std::clamp((peakDb - minDb) / dbRange, 0.0f, 1.0f);
-				const float peakY = rectBottom - peakNorm * rectHeight;
+				const VSTGUI::CCoord peakY = rectBottom - peakNorm * rectHeight;
 
 				context->setFrameColor(peakColor_);
 				context->setLineWidth(2);
-				context->moveTo(VSTGUI::CPoint(x + gap, peakY));
-				context->lineTo(VSTGUI::CPoint(x + barWidth - gap, peakY));
+				context->drawLine(VSTGUI::CPoint(x + gap, peakY), VSTGUI::CPoint(x + barWidth - gap, peakY));
 			}
 		}
 	}
