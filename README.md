@@ -1,6 +1,12 @@
 # Ableton SNES SPC Plugin
 
+**Current Version**: 0.1.0 Alpha  
+**Status**: In Development 🚧  
+**License**: MIT
+
 A VST3 plugin for Ableton Live (and other DAWs) that enables editing and playback of SNES SPC music files with full hardware-accurate emulation.
+
+---
 
 ## 🎯 Project Vision
 
@@ -10,6 +16,74 @@ Create a professional-grade audio plugin that brings SNES music composition dire
 - **Compose** new SNES music with authentic sound
 - **Export** to valid SPC format playable on real hardware
 - **Collaborate** using a rich project format (.spcx) that preserves all editing state
+
+---
+
+## 📥 Installation
+
+### Alpha Release (v0.1.0)
+
+> ⚠️ **Alpha Software**: This is an early alpha release. Expect bugs and missing features. GUI is not yet implemented - all controls are via DAW automation parameters.
+
+**Download**: [Latest Release](https://github.com/TheAnsarya/ableton-snes-spc/releases)
+
+**Quick Install (Windows)**:
+1. Download `SnesSpcVst3-0.1.0-win64.zip`
+2. Extract to `%APPDATA%\VST3\`
+3. Rescan plugins in your DAW
+
+For detailed build instructions, see [BUILDING.md](docs/BUILDING.md).
+
+---
+
+## ⚡ Quick Start
+
+1. Load the plugin on an audio track in your DAW
+2. Use automation to set "Load SPC" parameter (or prepare to add file loading in v0.2.0)
+3. Use "Play/Pause" parameter to start playback
+4. Control individual voices with mute/solo/volume parameters
+
+For complete usage guide, see [USER_GUIDE.md](docs/USER_GUIDE.md).
+
+---
+
+## ✨ Features (v0.1.0 Alpha)
+
+### Core Emulation ✅
+- Complete SPC700 CPU emulation (all 256 instructions)
+- S-DSP audio processor with 8-voice stereo output
+- Hardware-accurate BRR sample decompression and encoding
+- Echo/reverb effects, ADSR envelopes, FIR filters
+- Cycle-accurate timing
+
+### Audio Engine ✅
+- Real-time playback at 32 kHz (resampled to any DAW rate)
+- Per-voice mute/solo/volume controls (8 voices)
+- Master volume control
+- Loop enable/disable
+- Seek to position
+- Waveform capture for visualization
+
+### MIDI Support ✅
+- MIDI note-on triggers voice playback (C3-G3 = Voice 0-7)
+- MIDI note-off for voice release
+- Velocity controls voice volume
+- CC learn for parameter mapping
+
+### VST3 Integration ✅
+- 35+ automatable parameters
+- DAW transport sync
+- Tempo and time signature awareness
+- State save/restore
+- Preset management
+
+### What's Missing (Coming in v0.2.0)
+- ❌ GUI (all controls via automation)
+- ❌ Visual waveform display
+- ❌ Sample browser
+- ❌ File drag-and-drop
+
+---
 
 ## 🎮 What is SPC?
 
@@ -58,46 +132,52 @@ SPC files capture the complete state of the SNES's Sony SPC700 audio chip, inclu
 ### Input: SPC (.spc)
 
 Standard SNES music file format containing:
-
 - SPC700 RAM snapshot (64KB)
 - DSP registers (128 bytes)
 - ID666 metadata (song info)
 
-### Project: SPCX (.spcx)
+### Project: SPCX (.spcx) - Coming in v0.3.0
 
 Custom extended format for rich editing:
-
 - Full SPC data
-- Extended metadata (unlimited)
+- Extended metadata
 - Source samples (pre-BRR WAV)
 - Undo/redo history
-- Channel solo/mute states
-- Custom filter settings
 - Annotations and markers
 
 ### Output: SPC (.spc)
 
 Valid SPC file playable on:
-
 - Real SNES hardware (via flash cart)
-- SPC players (SPC700 Player, etc.)
-- Emulators
+- SPC players and emulators
 
-## ⚙️ Features
+---
 
-### Core Features
+## 🔌 Plugin Architecture
 
-- [ ] Hardware-accurate SPC700 CPU emulation
-- [ ] S-DSP audio processing with all effects
-- [ ] BRR sample encoding/decoding
-- [ ] Real-time audio rendering
+```text
+┌─────────────────────────────────────────┐
+│     VST3 Plugin Host (DAW)              │
+├─────────────────────────────────────────┤
+│  ┌───────────────────────────────────┐  │
+│  │   SNES SPC Plugin (VST3/C++)      │  │
+│  │   ├─ Processor (Audio Thread)     │  │
+│  │   ├─ Controller (UI Thread)       │  │
+│  │   └─ .NET Host (Interop)          │  │
+│  │       ↓                            │  │
+│  │   ┌───────────────────────────┐   │  │
+│  │   │ SpcPlugin.Core (.NET 10)  │   │  │
+│  │   ├─ SpcEngine (Orchestration)│   │  │
+│  │   ├─ Spc700 (CPU Emulator)    │   │  │
+│  │   ├─ SDsp (Audio Processor)   │   │  │
+│  │   ├─ BrrCodec (Compression)   │   │  │
+│  │   ├─ MidiProcessor            │   │  │
+│  │   └─ ProjectManager           │   │  │
+│  └───────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
 
-### Editing Features
-
-- [ ] 8-channel mixer view
-- [ ] Sample editor with waveform display
-- [ ] Piano roll sequence editor
-- [ ] Echo/reverb configuration
+---
 - [ ] ADSR envelope visualization
 
 ### Project Features
