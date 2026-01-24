@@ -2,6 +2,8 @@
 
 #include "vstgui/lib/cview.h"
 #include "vstgui/lib/cdrawcontext.h"
+#include "vstgui/uidescription/iviewcreator.h"
+#include "vstgui/uidescription/detail/uiviewcreatorattributes.h"
 #include <vector>
 #include <mutex>
 #include <cmath>

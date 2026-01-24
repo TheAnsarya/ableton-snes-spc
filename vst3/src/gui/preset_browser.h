@@ -4,6 +4,8 @@
 #include "vstgui/lib/cviewcontainer.h"
 #include "vstgui/lib/controls/clistcontrol.h"
 #include "vstgui/lib/controls/cscrollbar.h"
+#include "vstgui/uidescription/iviewcreator.h"
+#include "vstgui/uidescription/detail/uiviewcreatorattributes.h"
 #include "../spc_controller.h"
 #include <vector>
 #include <string>

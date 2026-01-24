@@ -14,6 +14,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Real-time parameter automation recording
 - Echo/reverb visual editor
 - Preset system with bank management
+- Custom view components for visualizers
+
+## [0.2.0] - 2026-01-24
+
+### Added
+
+#### GUI Framework
+- Basic VSTGUI integration for plugin editor window
+- UI description file (spc_editor.uidesc) with layout definitions
+- Parameter binding infrastructure for real-time updates
+- Support for knobs, sliders, buttons, and text displays
+- Color scheme and font definitions for consistent styling
+
+#### Technical Improvements
+- Fixed VSTGUI API compatibility with SDK 4.x
+- Improved build configuration with optional custom views
+- Enhanced CMake build system with ENABLE_CUSTOM_VIEWS option
+
+### Changed
+- Updated build documentation with GUI build options
+- Improved VST3 controller with better parameter synchronization
+
+### Fixed
+- VSTGUI header include paths for ViewCreatorAdapter
+- UIViewCreator attribute namespace resolution
+
+### Known Issues
+- Custom view components (WaveformView, SpectrumView, PresetBrowser) require VSTGUI API updates
+- Advanced visualizers deferred to v0.3.0
 
 ## [0.1.0] - 2026-01-24
 

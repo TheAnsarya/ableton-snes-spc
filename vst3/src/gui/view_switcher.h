@@ -2,6 +2,8 @@
 
 #include "vstgui/lib/cviewcontainer.h"
 #include "vstgui/lib/controls/ccontrol.h"
+#include "vstgui/uidescription/iviewcreator.h"
+#include "vstgui/uidescription/detail/uiviewcreatorattributes.h"
 #include <vector>
 #include <functional>
 
