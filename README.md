@@ -1,6 +1,6 @@
 # Ableton SNES SPC Plugin
 
-**Current Version**: 0.1.0 Alpha  
+**Current Version**: 0.2.0 Beta  
 **Status**: In Development 🚧  
 **License**: MIT
 
@@ -21,15 +21,15 @@ Create a professional-grade audio plugin that brings SNES music composition dire
 
 ## 📥 Installation
 
-### Alpha Release (v0.1.0)
+### Beta Release (v0.2.0)
 
-> ⚠️ **Alpha Software**: This is an early alpha release. Expect bugs and missing features. GUI is not yet implemented - all controls are via DAW automation parameters.
+> ⚠️ **Beta Software**: This is a beta release. Core audio functionality is stable. Basic GUI is included; advanced visualizers coming in v0.3.0.
 
 **Download**: [Latest Release](https://github.com/TheAnsarya/ableton-snes-spc/releases)
 
 **Quick Install (Windows)**:
-1. Download `SnesSpcVst3-0.1.0-win64.zip`
-2. Extract to `%APPDATA%\VST3\`
+1. Download from releases
+2. Extract to `%APPDATA%\VST3\` or `C:\Program Files\Common Files\VST3\`
 3. Rescan plugins in your DAW
 
 For detailed build instructions, see [BUILDING.md](docs/BUILDING.md).
@@ -39,7 +39,7 @@ For detailed build instructions, see [BUILDING.md](docs/BUILDING.md).
 ## ⚡ Quick Start
 
 1. Load the plugin on an audio track in your DAW
-2. Use automation to set "Load SPC" parameter (or prepare to add file loading in v0.2.0)
+2. Use the plugin editor window or DAW automation parameters
 3. Use "Play/Pause" parameter to start playback
 4. Control individual voices with mute/solo/volume parameters
 
@@ -47,7 +47,7 @@ For complete usage guide, see [USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ---
 
-## ✨ Features (v0.1.0 Alpha)
+## ✨ Features (v0.2.0 Beta)
 
 ### Core Emulation ✅
 - Complete SPC700 CPU emulation (all 256 instructions)
@@ -55,6 +55,12 @@ For complete usage guide, see [USER_GUIDE.md](docs/USER_GUIDE.md).
 - Hardware-accurate BRR sample decompression and encoding
 - Echo/reverb effects, ADSR envelopes, FIR filters
 - Cycle-accurate timing
+
+### GUI Framework ✅ (NEW in v0.2.0)
+- Basic VSTGUI plugin editor
+- Parameter binding and real-time updates
+- Standard controls (knobs, sliders, buttons)
+- Layout definition system
 
 ### Audio Engine ✅
 - Real-time playback at 32 kHz (resampled to any DAW rate)
