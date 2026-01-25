@@ -22,6 +22,9 @@ update `ALGORITHMS.md` and other doumentation with current state (for instance A
 
 -- whoops, wrong project, doesn't matter though it updated docs
 
+find the most important issues that actually need implementation with an SPC editor and work on them; update issues, todolists, documentation plans, etc. and update session/chat logs; continue;
+
+find the most important issues that actually need implementation with an SPC editor and work on them; update issues, todolists, documentation plans, etc. and update session/chat logs; continue;
 
 
 
