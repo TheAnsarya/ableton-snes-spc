@@ -1,103 +1,112 @@
 # GitHub Issues for Release Planning
 
+**Last Updated**: January 25, 2026  
+**Current Status**: v0.4.0 Released - GUI and file formats complete
+
 ## Milestones
 
-### Milestone: v0.2.0 Beta - GUI Development
-**Due Date**: March 31, 2026  
-**Description**: Add native VST3 GUI with VSTGUI for improved user experience
+### Milestone: v0.2.0 Beta - GUI Development ✅ COMPLETE
+**Completed**: January 24, 2026  
+**Description**: Basic VSTGUI integration with parameter binding
+
+### Milestone: v0.3.0 - Custom Views ✅ COMPLETE
+**Completed**: January 25, 2026  
+**Description**: Advanced GUI components including WaveformView, SpectrumView, PresetBrowser
+
+### Milestone: v0.4.0 - File Formats ✅ COMPLETE
+**Completed**: January 25, 2026  
+**Description**: Full SPC import/export with ID666 tags, SPCX project format, driver detection
+
+### Milestone: v1.0.0 - Production Release 🔄 IN PROGRESS
+**Target**: Q2 2026  
+**Description**: Undo/redo, advanced editing, cross-platform testing
 
 ---
 
-## Epic Issues
+## Completed Epic Issues
 
-### Epic #1: VSTGUI Integration
-**Title**: Integrate VSTGUI for Native Plugin Interface  
-**Labels**: epic, enhancement, v0.2.0  
-**Milestone**: v0.2.0 Beta
+### Epic #1: VSTGUI Integration ✅ COMPLETE
+**Status**: Implemented in v0.2.0-v0.3.0
 
-**Description**:
-Integrate VSTGUI framework to create a native VST3 plugin interface, replacing parameter-only automation with a visual interface.
+Completed features:
+- [x] VSTGUI framework integrated into CMake build ✅
+- [x] Base editor window created ✅
+- [x] Resource management (images, fonts) ✅
+- [x] Custom VSTGUI views (WaveformView, SpectrumView, PresetBrowser) ✅
+- [x] HiDPI support ✅
 
-**Goals**:
-- VSTGUI framework integrated into CMake build
-- Base editor window created
-- Resource management (images, fonts)
-- Custom SNES-themed UI design
-- Proper scaling for HiDPI displays
+### Epic #2: File Format Support ✅ COMPLETE
+**Status**: Implemented in v0.4.0
 
-**Dependencies**:
-- VST3 SDK VSTGUI support
-- Resource files (icons, backgrounds)
-
-**Tasks**:
-- [ ] Setup VSTGUI in CMake
-- [ ] Create base editor class
-- [ ] Design UI mockups
-- [ ] Implement resource loading
-- [ ] Add HiDPI support
-
-**Estimated Effort**: 2 weeks
+Completed features:
+- [x] SpcFile class with full ID666 support ✅
+- [x] ID666 text and binary format handling ✅
+- [x] SPCX project format (ZIP/JSON) ✅
+- [x] Editor settings persistence ✅
+- [x] Driver detection (10+ drivers) ✅
 
 ---
 
-## Feature Issues
+## Completed Feature Issues
 
-### Feature #2: Transport Controls UI
-**Title**: Add Transport Controls (Play, Pause, Stop, Loop)  
-**Labels**: feature, gui, v0.2.0  
-**Milestone**: v0.2.0 Beta  
-**Epic**: #1
+### Feature #2: Transport Controls UI ✅
+**Completed**: v0.2.0
 
-**Description**:
-Create transport control buttons in the plugin GUI for playback control without relying on DAW automation.
+### Feature #3: Voice Mixer View ✅
+**Completed**: v0.2.0
 
-**Acceptance Criteria**:
-- [ ] Play button starts playback
-- [ ] Pause button pauses without reset
-- [ ] Stop button stops and resets to beginning
-- [ ] Loop toggle button with visual state
-- [ ] Transport follows DAW sync when enabled
-- [ ] Visual feedback (active state, disabled states)
+### Feature #4: Waveform Visualizer ✅
+**Completed**: v0.3.0 (WaveformView)
 
-**UI Mockup**:
-```
-[▶ Play] [⏸ Pause] [⏹ Stop] [🔁 Loop] [Position: 0:00.000]
-```
+### Feature #5: Preset Browser ✅
+**Completed**: v0.3.0 (PresetBrowser with search/filter/sort)
 
-**Technical Notes**:
-- Connect to existing VST3 parameters
-- Update button states from processor
-- Handle DAW transport events
+### Feature #6: MIDI Learn ✅
+**Completed**: v0.3.0 (MidiLearnHandler)
 
-**Estimated Effort**: 3 days
+### Feature #7: Keyboard Shortcuts ✅
+**Completed**: v0.3.0 (KeyboardHandler)
+
+### Feature #26: SPCX Project Format ✅
+**Completed**: v0.4.0
+
+### Feature #27: SPC Import ✅
+**Completed**: v0.4.0
+
+### Feature #28: SPC Export ✅
+**Completed**: v0.4.0
 
 ---
 
-### Feature #3: Voice Mixer View
-**Title**: Implement 8-Channel Voice Mixer View  
-**Labels**: feature, gui, v0.2.0  
-**Milestone**: v0.2.0 Beta  
-**Epic**: #1
+## Remaining Issues (v1.0.0)
+
+### Feature: Undo/Redo System
+**Labels**: feature, v1.0.0  
+**Status**: Not started
 
 **Description**:
-Create a mixer-style view showing all 8 S-DSP voices with individual controls.
+Implement command pattern for undo/redo support.
 
-**Acceptance Criteria**:
-- [ ] 8 vertical channel strips
-- [ ] Per-channel: Mute, Solo, Volume slider, Level meter
-- [ ] Voice info display (sample number, pitch, envelope state)
-- [ ] Visual indicators for active voices (key on/off)
-- [ ] Color-coded channels
-- [ ] Solo logic (multiple solos supported)
+### Feature: Advanced Sample Editor
+**Labels**: feature, v1.0.0  
+**Status**: Not started
 
-**UI Mockup**:
-```
-┌────┬────┬────┬────┬────┬────┬────┬────┐
-│ V1 │ V2 │ V3 │ V4 │ V5 │ V6 │ V7 │ V8 │
-├────┼────┼────┼────┼────┼────┼────┼────┤
-│ S  │ S  │ S  │ S  │ S  │ S  │ S  │ S  │ Solo
-│ M  │ M  │ M  │ M  │ M  │ M  │ M  │ M  │ Mute
-│ ▓▓ │ ▓▓ │ ▓▓ │ ▓▓ │ ▓▓ │ ▓▓ │ ▓▓ │ ▓▓ │ Meter
+**Description**:
+Waveform editing, BRR re-encoding, loop point editing.
+
+### Feature: Piano Roll Sequencer
+**Labels**: feature, v1.0.0  
+**Status**: Not started
+
+**Description**:
+Visual sequence editor with MIDI-like piano roll interface.
+
+### Feature: Cross-Platform Support
+**Labels**: enhancement, v1.0.0  
+**Status**: Not started
+
+**Description**:
+Test and verify macOS and Linux builds.
 │ │  │ │  │ │  │ │  │ │  │ │  │ │  │ │  │
 │ ○  │ ○  │ ○  │ ○  │ ○  │ ○  │ ○  │ ○  │ Vol
 │ │  │ │  │ │  │ │  │ │  │ │  │ │  │ │  │

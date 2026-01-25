@@ -4,6 +4,9 @@
 
 The Ableton SNES SPC Plugin is a VST3 audio plugin that provides hardware-accurate SNES audio playback and editing. This document describes the technical architecture and key design decisions.
 
+**Current Version**: 0.4.0  
+**Status**: Feature Complete
+
 ## System Architecture
 
 ```text
@@ -63,9 +66,48 @@ The Ableton SNES SPC Plugin is a VST3 audio plugin that provides hardware-accura
 │  │  │  • Encode   │  │  • MIDI     │  │  • Sequence parsing     │   │ │
 │  │  │  • Quality  │  │  • Events   │  │                         │   │ │
 │  │  └─────────────┘  └─────────────┘  └─────────────────────────┘   │ │
+│  │                                                                   │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐   │ │
+│  │  │  SpcFile    │  │  SpcxFile   │  │    SpcAnalyzer          │   │ │
+│  │  │  (Import/   │  │  (Project   │  │                         │   │ │
+│  │  │   Export)   │  │   Format)   │  │  • 10+ sound drivers    │   │ │
+│  │  │  • ID666    │  │  • ZIP/JSON │  │  • NSPC, Akao, HAL Lab  │   │ │
+│  │  │  • Text/Bin │  │  • Settings │  │  • Capcom, Konami, etc  │   │ │
+│  │  │  • CPU state│  │  • Analysis │  │                         │   │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────────┘   │ │
 │  └───────────────────────────────────────────────────────────────────┘ │
 │                                                                         │
 │                         SNES SPC Plugin                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## GUI Architecture (VSTGUI 4.x)
+
+The plugin uses VSTGUI 4.x with custom view components:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         SpcEditor (Main Window)                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐  │
+│  │  ViewSwitcher    │  │  WaveformView    │  │  SpectrumView        │  │
+│  │  (Tab Control)   │  │  (Time Domain)   │  │  (Frequency Domain)  │  │
+│  │                  │  │  • Zoom/scroll   │  │  • 32-band FFT       │  │
+│  │  • Main View     │  │  • BRR blocks    │  │  • Peak hold         │  │
+│  │  • Browser View  │  │  • Loop points   │  │  • Decay smoothing   │  │
+│  │  • Settings      │  │  • Selection     │  │                      │  │
+│  └──────────────────┘  └──────────────────┘  └──────────────────────┘  │
+│                                                                         │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐  │
+│  │  PresetBrowser   │  │  KeyboardHandler │  │  MidiLearnHandler    │  │
+│  │  (File Browser)  │  │  (Shortcuts)     │  │  (CC Mapping)        │  │
+│  │                  │  │                  │  │                      │  │
+│  │  • Directory     │  │  • Space=Play    │  │  • Learn mode        │  │
+│  │    scanning      │  │  • Esc=Stop      │  │  • Multi-channel     │  │
+│  │  • Search/filter │  │  • Arrows=Volume │  │  • Preset save/load  │  │
+│  │  • Sort by name  │  │  • Customizable  │  │                      │  │
+│  │  • Double-click  │  │                  │  │                      │  │
+│  └──────────────────┘  └──────────────────┘  └──────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -223,6 +265,95 @@ public sealed class ProjectManager {
         // Build SPC
         builder.Build(sequenceData, sampleData, path);
     }
+}
+```
+
+### 7. SpcFile (NEW in v0.4.0)
+
+Complete SPC file format handling with ID666 tag support.
+
+```csharp
+public sealed class SpcFile {
+    // CPU State
+    public ushort PC { get; set; }
+    public byte A { get; set; }
+    public byte X { get; set; }
+    public byte Y { get; set; }
+    public byte PSW { get; set; }
+    public byte SP { get; set; }
+
+    // Memory
+    public byte[] Ram { get; } = new byte[65536];
+    public byte[] DspRegisters { get; } = new byte[128];
+    public byte[] ExtraRam { get; } = new byte[64];
+    public byte[] IplRom { get; } = new byte[64];
+
+    // ID666 Metadata (Text or Binary format)
+    public string? SongTitle { get; set; }
+    public string? GameTitle { get; set; }
+    public string? Artist { get; set; }
+    public int PlayLength { get; set; }
+    public int FadeLength { get; set; }
+
+    // Load with driver detection
+    public static SpcFile Load(string path) { ... }
+    
+    // Export with full ID666 tags
+    public void Save(string path) { ... }
+    
+    // Run analysis
+    public SpcAnalysisResult Analyze() { ... }
+}
+```
+
+### 8. SpcxFile (Enhanced in v0.4.0)
+
+ZIP-based project format with JSON manifests.
+
+```csharp
+public sealed class SpcxFile {
+    // SPC Data
+    public byte[] Ram { get; set; }
+    public byte[] DspRegisters { get; set; }
+    public ushort PC { get; set; }
+    public byte A { get; set; }
+    public byte X { get; set; }
+    public byte Y { get; set; }
+    public byte PSW { get; set; }
+    public byte SP { get; set; }
+
+    // Metadata
+    public SpcxMetadata Metadata { get; set; }
+    
+    // Editor Settings (voice mutes, solos, volumes)
+    public SpcxEditorSettings Settings { get; set; }
+    
+    // Cached Analysis
+    public SpcxAnalysisResult Analysis { get; set; }
+
+    // Import from SPC with driver detection
+    public static SpcxFile ImportFromSpc(string path) { ... }
+    
+    // Export to valid SPC file
+    public byte[] ExportToSpcBytes() { ... }
+}
+```
+
+### 9. SpcAnalyzer
+
+Sound driver detection and memory analysis.
+
+```csharp
+public sealed class SpcAnalyzer {
+    // Supported drivers
+    public static readonly string[] SupportedDrivers = {
+        "NSPC", "Akao", "HAL Lab", "Capcom", "Konami",
+        "Rare", "Enix", "Hudson", "Namco", "Taito"
+    };
+
+    public string DetectDriver(byte[] ram) { ... }
+    public SpcxSampleInfo[] ExtractSamples(byte[] ram, byte[] dsp) { ... }
+    public SpcxMemoryUsage AnalyzeMemory(byte[] ram, byte[] dsp) { ... }
 }
 ```
 

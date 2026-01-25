@@ -1,6 +1,19 @@
 # Contributing to SNES SPC VST3 Plugin
 
+**Version**: 0.4.0  
+**Last Updated**: January 25, 2026
+
 Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
+
+## Project Status
+
+The plugin is currently at v0.4.0 (Feature Complete) with:
+- ✅ Full VSTGUI GUI with custom views
+- ✅ SPC import/export with ID666 tags
+- ✅ SPCX project format
+- ✅ Driver detection (10+ drivers)
+
+Remaining work focuses on polish for v1.0.0.
 
 ## Code of Conduct
 

@@ -1,5 +1,8 @@
 # SNES SPC VST3 Plugin - User Guide
 
+**Version**: 0.4.0  
+**Last Updated**: January 25, 2026
+
 ## Overview
 
 The SNES SPC VST3 Plugin allows you to play and edit Super Nintendo (SNES) SPC audio files directly within your DAW (Digital Audio Workstation) like Ableton Live. It provides cycle-accurate emulation of the Sony SPC700 CPU and S-DSP audio processor.
@@ -8,10 +11,14 @@ The SNES SPC VST3 Plugin allows you to play and edit Super Nintendo (SNES) SPC a
 
 - **SPC Playback**: Load and play any `.spc` file with accurate SNES audio emulation
 - **8-Voice Control**: Mute, solo, and adjust volume for each of the 8 S-DSP voices
+- **Real-time Visualization**: Waveform display and spectrum analyzer
+- **Preset Browser**: Browse and load SPC files with search/filter
 - **Sample Export**: Extract BRR samples to WAV files
 - **DAW Sync**: Tempo and time signature synchronization with host
 - **Loop Control**: Enable/disable song looping
-- **Real-time Editing**: Modify DSP parameters in real-time
+- **MIDI Learn**: Map MIDI CC to any parameter
+- **Keyboard Shortcuts**: Quick access to common functions
+- **SPCX Projects**: Save and load project files with editor state
 
 ---
 
@@ -129,6 +136,30 @@ You can trigger voices via MIDI notes:
 - **Note On**: Key-on the voice (restart from sample start)
 - **Note Off**: Key-off the voice (enter release phase)
 - **Velocity**: Controls voice volume for that note
+
+### Keyboard Shortcuts
+
+The plugin supports keyboard shortcuts when the plugin window is focused:
+
+| Key | Action |
+|-----|--------|
+| **Space** | Play/Pause |
+| **Escape** | Stop |
+| **Up Arrow** | Increase volume |
+| **Down Arrow** | Decrease volume |
+| **Left Arrow** | Seek backward |
+| **Right Arrow** | Seek forward |
+
+### MIDI Learn
+
+Map any MIDI CC to plugin parameters:
+
+1. Click the **MIDI Learn** button or press the learn hotkey
+2. Move a plugin control (knob, slider, button)
+3. Move your MIDI controller knob/fader
+4. The mapping is saved automatically
+
+To clear a mapping, right-click the control and select "Clear MIDI Learn".
 
 ### Audio Routing
 

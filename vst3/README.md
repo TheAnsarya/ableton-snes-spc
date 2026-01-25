@@ -1,6 +1,16 @@
 # VST3 Plugin Build Instructions
 
+**Version**: 0.4.0  
+**Last Updated**: January 25, 2026
+
 This directory contains the VST3 plugin wrapper for the SNES SPC emulator.
+
+## Features
+
+- Full VSTGUI 4.x integration with custom views
+- WaveformView, SpectrumView, PresetBrowser components
+- Keyboard shortcuts and MIDI Learn
+- Native .NET interop via hostfxr
 
 ## Prerequisites
 
@@ -200,20 +210,31 @@ The controller provides methods for UI integration:
 
 ## Current Status
 
+### Completed ✅
+
 - [x] VST3 project structure
-- [x] Complete parameter set
+- [x] Complete parameter set (35+ parameters)
 - [x] Audio processor with .NET bridge
 - [x] MIDI event handling
 - [x] Pitch bend support
 - [x] State save/restore with embedded SPC
 - [x] File load messaging system
-- [x] GUI with VSTGUI
-  - [x] Drag-and-drop SPC file loading
-  - [x] 8-channel mixer with volume/mute/solo
-  - [x] Waveform display
-  - [x] Preset browser
-- [x] Sample editing bridge
+- [x] Full VSTGUI integration
+
+### GUI Components (All Complete) ✅
+
+- [x] **SpcEditor** - Main plugin window with drag-and-drop
+- [x] **WaveformView** - Real-time audio waveform visualization
+- [x] **SpectrumView** - FFT-based frequency spectrum analyzer
+- [x] **PresetBrowser** - SPC file browser with search/filter
+- [x] **ViewSwitcher** - Tab-based panel switching
+- [x] **KeyboardHandler** - Keyboard shortcuts (Space=Play, etc.)
+- [x] **MidiLearnHandler** - MIDI CC parameter mapping
+
+### Remaining
+
 - [ ] Native AOT validation tests
+- [ ] macOS/Linux build verification
 
 ## GUI Components
 
@@ -221,20 +242,48 @@ The controller provides methods for UI integration:
 Main plugin view implementing `VST3Editor` with drag-and-drop:
 - Supports `.spc`, `.rsn`, `.spcx` file types
 - Communicates with processor via message system
+- Integrates all custom views
 
 ### WaveformView (`src/gui/waveform_view.h`)
 Custom VSTGUI view for audio visualization:
 - Time-domain waveform display
 - BRR block visualization mode
-- Zoom and pan controls
-- Selection support
+- Zoom and scroll support
+- Selection support for loop points
+- Configurable colors
+
+### SpectrumView (`src/gui/spectrum_view.h`)
+FFT-based frequency analyzer:
+- 32-band frequency display
+- Peak hold indicators
+- Logarithmic scale option
+- Configurable decay rate and smoothing
 
 ### PresetBrowser (`src/gui/preset_browser.h`)
 List view for browsing SPC files:
-- Directory scanning with recursive search
-- Filter by name/game
-- Recent presets tracking
-- Favorites support
+- Directory scanning for .spc files
+- Search/filter functionality
+- Sorting by name, game, artist
+- Double-click to load
+- Scrollbar for large lists
+
+### ViewSwitcher (`src/gui/view_switcher.h`)
+Panel-switching container:
+- Tab-like view management
+- Parameter-driven view selection
+
+### KeyboardHandler (`src/gui/keyboard_handler.h`)
+Keyboard shortcuts:
+- Space for Play/Pause
+- Escape for Stop
+- Arrow keys for volume control
+- Customizable key bindings
+
+### MidiLearnHandler (`src/gui/midi_learn.h`)
+MIDI CC mapping system:
+- MIDI learn mode for parameter assignment
+- Save/load mapping presets
+- Multi-channel support
 
 ### UI Layout (`resource/spc_editor.uidesc`)
 VSTGUI XML description:

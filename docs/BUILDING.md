@@ -1,6 +1,15 @@
 # Building the SNES SPC VST3 Plugin
 
+**Version**: 0.4.0  
+**Last Updated**: January 25, 2026
+
 Complete guide to building the plugin from source.
+
+## Build Output
+
+When successfully built, you will have:
+- `SnesSpcVst3.vst3` - The VST3 plugin bundle
+- `SpcPlugin.Core.dll` - The .NET core library
 
 ## Prerequisites
 

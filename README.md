@@ -1,10 +1,10 @@
 # Ableton SNES SPC Plugin
 
-**Current Version**: 0.2.0 Beta  
-**Status**: In Development 🚧  
+**Current Version**: 0.4.0 Beta  
+**Status**: Feature Complete 🎉  
 **License**: MIT
 
-A VST3 plugin for Ableton Live (and other DAWs) that enables editing and playback of SNES SPC music files with full hardware-accurate emulation.
+A VST3 plugin for Ableton Live (and other DAWs) that enables editing and playback of SNES SPC music files with full hardware-accurate emulation. Includes complete custom GUI with waveform visualization, spectrum analyzer, and preset browser.
 
 ---
 
@@ -21,9 +21,9 @@ Create a professional-grade audio plugin that brings SNES music composition dire
 
 ## 📥 Installation
 
-### Beta Release (v0.2.0)
+### Beta Release (v0.4.0)
 
-> ⚠️ **Beta Software**: This is a beta release. Core audio functionality is stable. Basic GUI is included; advanced visualizers coming in v0.3.0.
+> ⚠️ **Beta Software**: This is a beta release. Core audio functionality is stable. Full custom GUI with visualizers, preset browser, and MIDI learn is included.
 
 **Download**: [Latest Release](https://github.com/TheAnsarya/ableton-snes-spc/releases)
 
@@ -47,7 +47,7 @@ For complete usage guide, see [USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ---
 
-## ✨ Features (v0.2.0 Beta)
+## ✨ Features (v0.4.0 Beta)
 
 ### Core Emulation ✅
 - Complete SPC700 CPU emulation (all 256 instructions)
@@ -56,11 +56,22 @@ For complete usage guide, see [USER_GUIDE.md](docs/USER_GUIDE.md).
 - Echo/reverb effects, ADSR envelopes, FIR filters
 - Cycle-accurate timing
 
-### GUI Framework ✅ (NEW in v0.2.0)
-- Basic VSTGUI plugin editor
-- Parameter binding and real-time updates
-- Standard controls (knobs, sliders, buttons)
-- Layout definition system
+### Custom GUI ✅ (Complete in v0.3.0+)
+- **WaveformView**: Real-time audio visualization with zoom/scroll
+- **SpectrumView**: FFT-based frequency analyzer with peak hold
+- **PresetBrowser**: SPC file browser with search/filter/sort
+- **ViewSwitcher**: Tab-based panel management
+- **KeyboardHandler**: Hotkeys (Space=Play, Esc=Stop, Arrows=Volume)
+- **MidiLearnHandler**: MIDI CC mapping with save/load presets
+- Full VSTGUI 4.x integration
+
+### File Formats ✅ (NEW in v0.4.0)
+- **SPC Import**: Full ID666 tag support (text and binary formats)
+- **SPC Export**: Generate valid SPC files with metadata
+- **SPCX Project**: ZIP-based project format with JSON manifests
+- **Driver Detection**: Auto-detect 10+ sound drivers (NSPC, Akao, HAL Lab, Capcom, Konami, Rare, Enix, Hudson, Namco, Taito)
+- **Analysis Caching**: Memory usage, sample info persistence
+- **Editor State**: Voice mutes/solos/volumes saved in projects
 
 ### Audio Engine ✅
 - Real-time playback at 32 kHz (resampled to any DAW rate)
@@ -74,7 +85,7 @@ For complete usage guide, see [USER_GUIDE.md](docs/USER_GUIDE.md).
 - MIDI note-on triggers voice playback (C3-G3 = Voice 0-7)
 - MIDI note-off for voice release
 - Velocity controls voice volume
-- CC learn for parameter mapping
+- MIDI Learn for CC parameter mapping
 
 ### VST3 Integration ✅
 - 35+ automatable parameters
@@ -82,12 +93,6 @@ For complete usage guide, see [USER_GUIDE.md](docs/USER_GUIDE.md).
 - Tempo and time signature awareness
 - State save/restore
 - Preset management
-
-### What's Missing (Coming in v0.2.0)
-- ❌ GUI (all controls via automation)
-- ❌ Visual waveform display
-- ❌ Sample browser
-- ❌ File drag-and-drop
 
 ---
 
@@ -142,12 +147,14 @@ Standard SNES music file format containing:
 - DSP registers (128 bytes)
 - ID666 metadata (song info)
 
-### Project: SPCX (.spcx) - Coming in v0.3.0
+### Project: SPCX (.spcx) ✅ Implemented
 
 Custom extended format for rich editing:
-- Full SPC data
-- Extended metadata
-- Source samples (pre-BRR WAV)
+- Full SPC data (RAM, DSP, CPU state)
+- ID666 metadata (text and binary formats)
+- Editor settings (voice mutes/solos/volumes)
+- Cached analysis (driver detection, memory usage)
+- ZIP archive with JSON manifests for editability
 - Undo/redo history
 - Annotations and markers
 
@@ -169,6 +176,7 @@ Valid SPC file playable on:
 │  │   SNES SPC Plugin (VST3/C++)      │  │
 │  │   ├─ Processor (Audio Thread)     │  │
 │  │   ├─ Controller (UI Thread)       │  │
+│  │   │   └─ VSTGUI Custom Views      │  │
 │  │   └─ .NET Host (Interop)          │  │
 │  │       ↓                            │  │
 │  │   ┌───────────────────────────┐   │  │
@@ -177,6 +185,9 @@ Valid SPC file playable on:
 │  │   ├─ Spc700 (CPU Emulator)    │   │  │
 │  │   ├─ SDsp (Audio Processor)   │   │  │
 │  │   ├─ BrrCodec (Compression)   │   │  │
+│  │   ├─ SpcFile (Import/Export)  │   │  │
+│  │   ├─ SpcxFile (Project Format)│   │  │
+│  │   ├─ SpcAnalyzer (Detection)  │   │  │
 │  │   ├─ MidiProcessor            │   │  │
 │  │   └─ ProjectManager           │   │  │
 │  └───────────────────────────────────┘  │
@@ -184,30 +195,14 @@ Valid SPC file playable on:
 ```
 
 ---
-- [ ] ADSR envelope visualization
-
-### Project Features
-
-- [ ] SPCX project format
-- [ ] Import from SPC
-- [ ] Export to SPC
-- [ ] Preset management
-- [ ] Undo/redo system
-
-### Integration Features
-
-- [ ] VST3 parameter automation
-- [ ] MIDI input for live playing
-- [ ] Sample rate conversion
-- [ ] Latency compensation
 
 ## 🛠️ Technology Stack
 
 | Component         | Technology                 |
 | ----------------- | -------------------------- |
-| Plugin Framework  | VST3 SDK + C++/CLI wrapper |
+| Plugin Framework  | VST3 SDK + VSTGUI 4.x      |
 | Core Logic        | C# / .NET 10               |
-| UI Framework      | MAUI or Avalonia           |
+| UI Framework      | VSTGUI (custom views)      |
 | Audio Processing  | Native interop             |
 | Build System      | CMake + MSBuild            |
 | Testing           | xUnit                      |

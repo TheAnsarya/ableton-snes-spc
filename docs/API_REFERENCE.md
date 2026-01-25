@@ -1,5 +1,8 @@
 # SpcPlugin.Core API Reference
 
+**Version**: 0.4.0  
+**Last Updated**: January 25, 2026
+
 ## Namespace: SpcPlugin.Core.Audio
 
 ### SpcEngine
@@ -355,6 +358,200 @@ public const int DIR = 0x5D;    // Sample directory offset
 public const int ESA = 0x6D;    // Echo buffer start
 public const int EDL = 0x7D;    // Echo delay
 public const int FIR = 0x0F;    // FIR filter coefficients (x = 0-7)
+```
+
+---
+
+## Namespace: SpcPlugin.Core.Formats (NEW in v0.4.0)
+
+### SpcFile
+
+Complete SPC file format handler with ID666 tag support.
+
+```csharp
+public sealed class SpcFile
+```
+
+#### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `PC` | ushort | Program counter |
+| `A` | byte | Accumulator register |
+| `X` | byte | X index register |
+| `Y` | byte | Y index register |
+| `PSW` | byte | Program status word |
+| `SP` | byte | Stack pointer |
+| `Ram` | byte[] | 64KB SPC RAM |
+| `DspRegisters` | byte[] | 128-byte DSP registers |
+| `ExtraRam` | byte[] | 64-byte extra RAM |
+| `IplRom` | byte[] | 64-byte IPL ROM |
+| `SongTitle` | string? | Song title from ID666 |
+| `GameTitle` | string? | Game title from ID666 |
+| `Artist` | string? | Artist name |
+| `Dumper` | string? | Person who dumped the file |
+| `Comments` | string? | Comments |
+| `DumpDate` | string? | Date the file was dumped |
+| `PlayLength` | int | Play length in seconds |
+| `FadeLength` | int | Fade length in milliseconds |
+
+#### Methods
+
+##### Load
+
+```csharp
+public static SpcFile Load(string path)
+public static SpcFile Load(byte[] data)
+```
+
+Load SPC from file path or byte array.
+
+##### Save
+
+```csharp
+public void Save(string path)
+public byte[] ToBytes()
+```
+
+Save SPC file with ID666 metadata (text format by default).
+
+##### Analyze
+
+```csharp
+public SpcAnalysisResult Analyze()
+```
+
+Run driver detection and memory analysis.
+
+##### Clone
+
+```csharp
+public SpcFile Clone()
+```
+
+Create a deep copy for non-destructive editing.
+
+---
+
+### SpcxFile
+
+ZIP-based project format with JSON manifests.
+
+```csharp
+public sealed class SpcxFile
+```
+
+#### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Ram` | byte[] | 64KB SPC RAM |
+| `DspRegisters` | byte[] | 128-byte DSP registers |
+| `PC` | ushort | Program counter |
+| `A` | byte | Accumulator |
+| `X` | byte | X index register |
+| `Y` | byte | Y index register |
+| `PSW` | byte | Program status word |
+| `SP` | byte | Stack pointer |
+| `Metadata` | SpcxMetadata | ID666 and extended metadata |
+| `Settings` | SpcxEditorSettings | Editor state (mutes, solos, volumes) |
+| `Analysis` | SpcxAnalysisResult | Cached driver detection results |
+
+#### Methods
+
+##### Load/Save
+
+```csharp
+public static SpcxFile Load(string path)
+public void Save(string path)
+```
+
+##### Import/Export
+
+```csharp
+public static SpcxFile ImportFromSpc(string spcPath)
+public static SpcxFile ImportFromSpc(SpcFile spc)
+public byte[] ExportToSpcBytes()
+public SpcFile ToSpcFile()
+```
+
+##### Analysis
+
+```csharp
+public void RunAnalysis()
+```
+
+Run driver detection and cache results.
+
+---
+
+### SpcxEditorSettings
+
+Editor state persistence.
+
+```csharp
+public class SpcxEditorSettings
+{
+    public bool[] VoiceMutes { get; set; }      // 8 voices
+    public bool[] VoiceSolos { get; set; }      // 8 voices
+    public int[] VoiceVolumes { get; set; }     // 0-100
+    public int MasterVolume { get; set; }       // 0-100
+    public int PlaybackPosition { get; set; }
+    public bool LoopEnabled { get; set; }
+    public int LoopCount { get; set; }
+    public float TempoAdjustment { get; set; }
+}
+```
+
+---
+
+### SpcxAnalysisResult
+
+Cached analysis results.
+
+```csharp
+public class SpcxAnalysisResult
+{
+    public string DriverName { get; set; }
+    public double Confidence { get; set; }
+    public SpcxSampleInfo[] Samples { get; set; }
+    public SpcxMemoryUsage MemoryUsage { get; set; }
+}
+```
+
+---
+
+## Namespace: SpcPlugin.Core.Analysis (NEW in v0.4.0)
+
+### SpcAnalyzer
+
+Sound driver detection and memory analysis.
+
+```csharp
+public sealed class SpcAnalyzer
+```
+
+#### Supported Drivers
+
+| Driver | Publisher | Example Games |
+|--------|-----------|---------------|
+| NSPC | Nintendo | Mario, Zelda |
+| Akao | Square | Final Fantasy |
+| HAL Lab | HAL | Kirby |
+| Capcom | Capcom | Mega Man X |
+| Konami | Konami | Castlevania |
+| Rare | Rare | DKC |
+| Enix | Enix | ActRaiser |
+| Hudson | Hudson | Bomberman |
+| Namco | Namco | Tales |
+| Taito | Taito | Bust-a-Move |
+
+#### Methods
+
+```csharp
+public string DetectDriver(byte[] ram)
+public SpcxSampleInfo[] ExtractSamples(byte[] ram, byte[] dsp)
+public SpcxMemoryUsage AnalyzeMemory(byte[] ram, byte[] dsp)
 ```
 
 ---
