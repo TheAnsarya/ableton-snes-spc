@@ -14,7 +14,13 @@ Complete all the issues and todolists and update them and documentation and chat
 
 continue working this repos and project for a while;
 
+--- try again
 
+#26-28: SPCX project format and SPC import/export
+
+update `ALGORITHMS.md` and other doumentation with current state (for instance ALGORITHMS.md says we're not using sa-is); comprehensive updating of readme files and `md` files and other docs;
+
+-- whoops, wrong project, doesn't matter though it updated docs
 
 
 
