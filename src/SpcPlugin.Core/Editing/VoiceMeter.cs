@@ -1,3 +1,5 @@
+using SpcPlugin.Core.Hardware;
+
 namespace SpcPlugin.Core.Editing;
 
 /// <summary>
@@ -5,14 +7,14 @@ namespace SpcPlugin.Core.Editing;
 /// Provides peak levels, RMS, and clipping detection.
 /// </summary>
 public sealed class VoiceMeter {
-	private readonly float[] _peakLevels = new float[8];
-	private readonly float[] _rmsLevels = new float[8];
-	private readonly float[] _peakHold = new float[8];
-	private readonly int[] _peakHoldCountdown = new int[8];
-	private readonly bool[] _clipping = new bool[8];
-	private readonly RmsAccumulator[] _rmsAccumulators = new RmsAccumulator[8];
+	private readonly float[] _peakLevels = new float[SnesDspLimits.VoiceCount];
+	private readonly float[] _rmsLevels = new float[SnesDspLimits.VoiceCount];
+	private readonly float[] _peakHold = new float[SnesDspLimits.VoiceCount];
+	private readonly int[] _peakHoldCountdown = new int[SnesDspLimits.VoiceCount];
+	private readonly bool[] _clipping = new bool[SnesDspLimits.VoiceCount];
+	private readonly RmsAccumulator[] _rmsAccumulators = new RmsAccumulator[SnesDspLimits.VoiceCount];
 
-	private const int PeakHoldSamples = 32000; // ~1 second at 32kHz
+	private const int PeakHoldSamples = SnesDspLimits.SampleRate; // 1 second at 32kHz
 	private const float DecayRate = 0.9995f;   // Peak decay rate per sample
 	private const float ClipThreshold = 0.99f;
 
@@ -20,7 +22,7 @@ public sealed class VoiceMeter {
 	/// Creates a new voice meter.
 	/// </summary>
 	public VoiceMeter() {
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < SnesDspLimits.VoiceCount; i++) {
 			_rmsAccumulators[i] = new RmsAccumulator(1024);
 		}
 	}

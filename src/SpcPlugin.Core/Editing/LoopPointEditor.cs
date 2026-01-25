@@ -1,21 +1,23 @@
 using SpcPlugin.Core.Audio;
+using SpcPlugin.Core.Hardware;
 
 namespace SpcPlugin.Core.Editing;
 
 /// <summary>
 /// Manages loop point editing for BRR samples with visual feedback.
 /// Handles loop point validation, auto-detection, and crossfade smoothing.
+/// All operations respect BRR block alignment (16 samples per 9-byte block).
 /// </summary>
 public sealed class LoopPointEditor {
 	private short[]? _samples;
 	private byte[]? _brrData;
-	private int _sampleRate = 32000;
+	private int _sampleRate = SnesDspLimits.SampleRate;
 
 	/// <summary>BRR block size in samples.</summary>
-	public const int SamplesPerBlock = 16;
+	public const int SamplesPerBlock = SnesDspLimits.BrrSamplesPerBlock;
 
 	/// <summary>BRR block size in bytes.</summary>
-	public const int BytesPerBlock = 9;
+	public const int BytesPerBlock = SnesDspLimits.BrrBytesPerBlock;
 
 	/// <summary>Event raised when loop points change.</summary>
 	public event EventHandler<LoopPointChangedEventArgs>? LoopPointChanged;

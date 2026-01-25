@@ -1,20 +1,19 @@
 using SpcPlugin.Core.Audio;
+using SpcPlugin.Core.Hardware;
 
 namespace SpcPlugin.Core.Editing;
 
 /// <summary>
 /// Manages the sample bank for an SPC file.
 /// Handles sample allocation, import, export, and memory management.
+/// Respects real S-DSP constraints including echo buffer.
 /// </summary>
 public sealed class SampleBankManager {
 	private readonly SpcEditor _editor;
-	private readonly SampleEntry[] _samples = new SampleEntry[256];
+	private readonly SampleEntry[] _samples = new SampleEntry[SnesDspLimits.MaxSamples];
 
 	/// <summary>Start of sample data area in SPC RAM.</summary>
 	public const int DefaultSampleDataStart = 0x2000;
-
-	/// <summary>End of available sample space (before echo buffer).</summary>
-	public const int DefaultSampleDataEnd = 0xF000;
 
 	/// <summary>Event raised when a sample is added or modified.</summary>
 	public event EventHandler<SampleChangedEventArgs>? SampleChanged;
@@ -31,11 +30,20 @@ public sealed class SampleBankManager {
 	/// <summary>Gets the sample directory base address.</summary>
 	public int DirectoryAddress => _editor.SampleDirectoryAddress;
 
+	/// <summary>Gets the echo buffer start address.</summary>
+	public int EchoBufferAddress => _editor.EchoBufferAddress;
+
+	/// <summary>Gets the echo buffer size in bytes.</summary>
+	public int EchoBufferSize => SnesDspLimits.EchoBufferSizeForDelay(_editor.EchoDelay);
+
+	/// <summary>Gets the end of available sample space (before echo buffer).</summary>
+	public int SampleDataEnd => EchoBufferAddress > 0 ? EchoBufferAddress : SnesDspLimits.TotalRam;
+
 	/// <summary>Gets the number of samples with data.</summary>
 	public int SampleCount {
 		get {
 			int count = 0;
-			for (int i = 0; i < 256; i++) {
+			for (int i = 0; i < SnesDspLimits.MaxSamples; i++) {
 				if (_samples[i].HasData) count++;
 			}
 			return count;
@@ -46,21 +54,21 @@ public sealed class SampleBankManager {
 	public int UsedMemory {
 		get {
 			int total = 0;
-			for (int i = 0; i < 256; i++) {
+			for (int i = 0; i < SnesDspLimits.MaxSamples; i++) {
 				total += _samples[i].Length;
 			}
 			return total;
 		}
 	}
 
-	/// <summary>Gets available sample memory in bytes.</summary>
-	public int AvailableMemory => DefaultSampleDataEnd - DefaultSampleDataStart - UsedMemory;
+	/// <summary>Gets available sample memory in bytes (respects echo buffer).</summary>
+	public int AvailableMemory => SampleDataEnd - DefaultSampleDataStart - UsedMemory;
 
 	/// <summary>
 	/// Gets information about a sample.
 	/// </summary>
 	public SampleEntry GetSample(int index) {
-		if (index < 0 || index > 255) {
+		if (!SnesDspLimits.IsValidSampleIndex(index)) {
 			throw new ArgumentOutOfRangeException(nameof(index));
 		}
 		return _samples[index];
@@ -70,7 +78,7 @@ public sealed class SampleBankManager {
 	/// Gets all samples with data.
 	/// </summary>
 	public IEnumerable<SampleEntry> GetAllSamples() {
-		for (int i = 0; i < 256; i++) {
+		for (int i = 0; i < SnesDspLimits.MaxSamples; i++) {
 			if (_samples[i].HasData) {
 				yield return _samples[i];
 			}
@@ -81,7 +89,7 @@ public sealed class SampleBankManager {
 	/// Refreshes sample information from SPC memory.
 	/// </summary>
 	public void Refresh() {
-		for (int i = 0; i < 256; i++) {
+		for (int i = 0; i < SnesDspLimits.MaxSamples; i++) {
 			var info = _editor.GetSampleInfo(i);
 			var brr = _editor.GetSampleBrr(i);
 
@@ -92,8 +100,8 @@ public sealed class SampleBankManager {
 				Length = info.Length,
 				HasData = info.Length > 0,
 				HasLoop = info.LoopAddress >= info.StartAddress && info.LoopAddress < info.StartAddress + info.Length,
-				BlockCount = info.Length / 9,
-				SampleCount = (info.Length / 9) * 16,
+				BlockCount = info.Length / SnesDspLimits.BrrBytesPerBlock,
+				SampleCount = (info.Length / SnesDspLimits.BrrBytesPerBlock) * SnesDspLimits.BrrSamplesPerBlock,
 			};
 		}
 	}
@@ -126,22 +134,27 @@ public sealed class SampleBankManager {
 	/// <param name="loopBlock">Loop point in blocks (-1 for no loop).</param>
 	/// <returns>Import result.</returns>
 	public SampleImportResult ImportBrr(int index, byte[] brrData, int loopBlock = -1) {
-		if (index < 0 || index > 255) {
-			return new SampleImportResult { Success = false, Error = "Invalid sample index" };
+		if (!SnesDspLimits.IsValidSampleIndex(index)) {
+			return new SampleImportResult { Success = false, Error = "Invalid sample index (0-255)" };
 		}
 
 		if (brrData.Length == 0) {
 			return new SampleImportResult { Success = false, Error = "Empty BRR data" };
 		}
 
-		if (brrData.Length % 9 != 0) {
+		if (brrData.Length % SnesDspLimits.BrrBytesPerBlock != 0) {
 			return new SampleImportResult { Success = false, Error = "BRR data must be multiple of 9 bytes" };
 		}
 
-		// Find available memory location
+		// Find available memory location (respects echo buffer)
 		int address = FindAvailableSpace(brrData.Length, index);
 		if (address < 0) {
-			return new SampleImportResult { Success = false, Error = "Not enough memory for sample" };
+			return new SampleImportResult { Success = false, Error = $"Not enough memory for sample (need {brrData.Length} bytes, have {AvailableMemory} bytes)" };
+		}
+
+		// Verify address doesn't overlap with echo buffer
+		if (EchoBufferAddress > 0 && address + brrData.Length > EchoBufferAddress) {
+			return new SampleImportResult { Success = false, Error = "Sample would overlap with echo buffer" };
 		}
 
 		// Write BRR data to RAM
@@ -149,7 +162,7 @@ public sealed class SampleBankManager {
 		brrData.CopyTo(ram.Slice(address, brrData.Length));
 
 		// Calculate loop address
-		int loopAddress = loopBlock >= 0 ? address + loopBlock * 9 : address;
+		int loopAddress = loopBlock >= 0 ? address + loopBlock * SnesDspLimits.BrrBytesPerBlock : address;
 
 		// Update sample directory
 		_editor.SetSampleInfo(index, (ushort)address, (ushort)loopAddress);
@@ -162,8 +175,8 @@ public sealed class SampleBankManager {
 			Length = brrData.Length,
 			HasData = true,
 			HasLoop = loopBlock >= 0,
-			BlockCount = brrData.Length / 9,
-			SampleCount = (brrData.Length / 9) * 16,
+			BlockCount = brrData.Length / SnesDspLimits.BrrBytesPerBlock,
+			SampleCount = (brrData.Length / SnesDspLimits.BrrBytesPerBlock) * SnesDspLimits.BrrSamplesPerBlock,
 		};
 
 		OnSampleChanged(index, SampleChangeType.Added);
@@ -310,9 +323,12 @@ public sealed class SampleBankManager {
 			currentAddress += data.Length;
 		}
 
-		// Clear remaining space
+		// Clear remaining space up to echo buffer
 		var ram = _editor.Ram;
-		ram.Slice(currentAddress, DefaultSampleDataEnd - currentAddress).Clear();
+		int clearEnd = SampleDataEnd;
+		if (clearEnd > currentAddress) {
+			ram.Slice(currentAddress, clearEnd - currentAddress).Clear();
+		}
 
 		return beforeUsed - UsedMemory;
 	}
@@ -340,8 +356,8 @@ public sealed class SampleBankManager {
 			}
 		}
 
-		// Check if there's room
-		if (endAddress + size > DefaultSampleDataEnd) {
+		// Check if there's room (respects echo buffer)
+		if (endAddress + size > SampleDataEnd) {
 			return -1;
 		}
 

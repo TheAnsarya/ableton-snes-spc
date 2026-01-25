@@ -199,6 +199,22 @@ public sealed class SpcEditor {
 	}
 
 	/// <summary>
+	/// Gets the echo buffer start address (ESA register * 0x100).
+	/// </summary>
+	public int EchoBufferAddress => _dspRegisters[0x6d] << 8;
+
+	/// <summary>
+	/// Gets/sets the echo start address page (ESA register).
+	/// </summary>
+	public byte EchoStartPage {
+		get => _dspRegisters[0x6d];
+		set {
+			_dspRegisters[0x6d] = value;
+			IsModified = true;
+		}
+	}
+
+	/// <summary>
 	/// Gets/sets the FIR filter coefficients.
 	/// </summary>
 	public void SetFirCoefficients(ReadOnlySpan<sbyte> coefficients) {

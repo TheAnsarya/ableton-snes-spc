@@ -1,8 +1,11 @@
+using SpcPlugin.Core.Hardware;
+
 namespace SpcPlugin.Core.Editing;
 
 /// <summary>
 /// Channel mixer model for the 8 S-DSP voices.
 /// Provides volume, pan, solo, mute, and per-voice effects controls.
+/// All values map directly to real S-DSP registers.
 /// </summary>
 public sealed class ChannelMixer {
 	private readonly SpcEditor _editor;
@@ -23,11 +26,12 @@ public sealed class ChannelMixer {
 	public ChannelMixer(SpcEditor editor) {
 		_editor = editor;
 
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < SnesDspLimits.VoiceCount; i++) {
 			_channels[i] = new ChannelState {
 				Index = i,
 				Volume = 1.0f,
 				Pan = 0.0f,
+				PhaseInverted = false,
 				IsMuted = false,
 				IsSolo = false,
 				EchoEnabled = false,
@@ -224,9 +228,15 @@ public sealed class ChannelMixer {
 
 	/// <summary>
 	/// Sets pitch modulation enabled for a channel.
+	/// Note: Voice 0 cannot receive pitch mod (no previous voice).
 	/// </summary>
 	public void SetPitchModEnabled(int channel, bool enabled) {
 		ValidateChannel(channel);
+
+		// Voice 0 cannot have pitch mod (it modulates from the previous voice)
+		if (channel == 0 && enabled) {
+			return;
+		}
 
 		lock (_lock) {
 			if (_channels[channel].PitchModEnabled == enabled) return;
@@ -235,6 +245,22 @@ public sealed class ChannelMixer {
 
 		ApplyPitchModMask();
 		OnChannelChanged(channel, ChannelParameter.PitchMod);
+	}
+
+	/// <summary>
+	/// Sets phase inversion for a channel.
+	/// The S-DSP uses signed volumes, so negative values invert phase.
+	/// </summary>
+	public void SetPhaseInverted(int channel, bool inverted) {
+		ValidateChannel(channel);
+
+		lock (_lock) {
+			if (_channels[channel].PhaseInverted == inverted) return;
+			_channels[channel].PhaseInverted = inverted;
+		}
+
+		ApplyChannelVolume(channel);
+		OnChannelChanged(channel, ChannelParameter.Phase);
 	}
 
 	/// <summary>
@@ -259,18 +285,27 @@ public sealed class ChannelMixer {
 		byte pitchModMask = _editor.PitchModulation;
 
 		lock (_lock) {
-			for (int i = 0; i < 8; i++) {
+			for (int i = 0; i < SnesDspLimits.VoiceCount; i++) {
 				var voiceInfo = _editor.GetVoiceInfo(i);
 
-				// Calculate volume and pan from L/R volumes
-				float left = voiceInfo.VolumeLeft / 127f;
-				float right = voiceInfo.VolumeRight / 127f;
+				// S-DSP volumes are signed - negative = phase inverted
+				float left = voiceInfo.VolumeLeft / (float)SnesDspLimits.MaxVolume;
+				float right = voiceInfo.VolumeRight / (float)SnesDspLimits.MaxVolume;
+
+				// Detect phase inversion (both channels negative)
+				bool inverted = voiceInfo.VolumeLeft < 0 && voiceInfo.VolumeRight < 0;
+				if (inverted) {
+					left = -left;
+					right = -right;
+				}
+
 				float maxVol = Math.Max(Math.Abs(left), Math.Abs(right));
 
 				_channels[i].Volume = maxVol;
 				_channels[i].Pan = maxVol > 0.001f ? (right - left) / (2 * maxVol) : 0;
+				_channels[i].PhaseInverted = inverted;
 
-				// Effects
+				// Effects from DSP register flags
 				_channels[i].EchoEnabled = (echoMask & (1 << i)) != 0;
 				_channels[i].NoiseEnabled = (noiseMask & (1 << i)) != 0;
 				_channels[i].PitchModEnabled = (pitchModMask & (1 << i)) != 0;
@@ -314,11 +349,15 @@ public sealed class ChannelMixer {
 		}
 
 		// Calculate L/R from volume and pan
+		// Pan law: constant power panning
 		float panL = state.Pan <= 0 ? 1.0f : 1.0f - state.Pan;
 		float panR = state.Pan >= 0 ? 1.0f : 1.0f + state.Pan;
 
-		sbyte volL = (sbyte)(effectiveVolume * panL * 127);
-		sbyte volR = (sbyte)(effectiveVolume * panR * 127);
+		// S-DSP uses signed 8-bit volumes (-128 to 127)
+		// Negative values = phase inversion (real hardware feature)
+		int sign = state.PhaseInverted ? -1 : 1;
+		sbyte volL = SnesDspLimits.ClampVolume((int)(effectiveVolume * panL * SnesDspLimits.MaxVolume * sign));
+		sbyte volR = SnesDspLimits.ClampVolume((int)(effectiveVolume * panR * SnesDspLimits.MaxVolume * sign));
 
 		_editor.SetVoiceVolume(channel, volL, volR);
 	}
@@ -373,6 +412,7 @@ public sealed class ChannelMixer {
 
 /// <summary>
 /// State of a single mixer channel.
+/// All properties map to real S-DSP capabilities.
 /// </summary>
 public sealed class ChannelState {
 	/// <summary>Channel index (0-7).</summary>
@@ -384,19 +424,22 @@ public sealed class ChannelState {
 	/// <summary>Pan (-1.0 = left, 0.0 = center, 1.0 = right).</summary>
 	public float Pan { get; set; }
 
+	/// <summary>Phase inversion (S-DSP supports negative volumes).</summary>
+	public bool PhaseInverted { get; set; }
+
 	/// <summary>Whether the channel is muted.</summary>
 	public bool IsMuted { get; set; }
 
 	/// <summary>Whether the channel is soloed.</summary>
 	public bool IsSolo { get; set; }
 
-	/// <summary>Whether echo is enabled.</summary>
+	/// <summary>Whether echo is enabled (EON bit).</summary>
 	public bool EchoEnabled { get; set; }
 
-	/// <summary>Whether noise is enabled.</summary>
+	/// <summary>Whether noise is enabled instead of sample (NON bit).</summary>
 	public bool NoiseEnabled { get; set; }
 
-	/// <summary>Whether pitch modulation is enabled.</summary>
+	/// <summary>Whether pitch modulation from previous voice is enabled (PMON bit).</summary>
 	public bool PitchModEnabled { get; set; }
 
 	/// <summary>Creates a copy of this state.</summary>
@@ -404,6 +447,7 @@ public sealed class ChannelState {
 		Index = Index,
 		Volume = Volume,
 		Pan = Pan,
+		PhaseInverted = PhaseInverted,
 		IsMuted = IsMuted,
 		IsSolo = IsSolo,
 		EchoEnabled = EchoEnabled,
@@ -413,11 +457,12 @@ public sealed class ChannelState {
 }
 
 /// <summary>
-/// Channel parameter types.
+/// Channel parameter types for change events.
 /// </summary>
 public enum ChannelParameter {
 	Volume,
 	Pan,
+	Phase,
 	Mute,
 	Solo,
 	Echo,
