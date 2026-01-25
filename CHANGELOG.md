@@ -8,12 +8,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- SPCX project format support
 - Advanced sample editor with waveform display
 - Piano roll sequence editor
 - Real-time parameter automation recording
 - Echo/reverb visual editor
 - Preset system with bank management
+
+## [0.4.0] - 2026-01-25
+
+### Added
+
+#### SPC File Format Support (Issues #27, #28)
+- **SpcFile Class**: Complete SPC file format handler
+  - Full import/export of SPC files
+  - CPU state preservation (PC, A, X, Y, PSW, SP)
+  - 64KB RAM, 128-byte DSP registers, Extra RAM, IPL ROM
+  - ID666 tag reading and writing (text and binary formats)
+  - Auto-detection of ID666 format type
+  - Metadata support: song title, game title, artist, dumper, comments
+  - Playback timing: play length, fade length
+  - Clone functionality for non-destructive editing
+
+- **Driver Detection on Import**
+  - Automatic sound driver identification during SPC import
+  - Supported drivers: NSPC, Akao, HAL Lab, Capcom, Konami, Rare, Enix, Hudson, Namco, Taito
+  - Analysis results cached in SPCX project format
+
+#### SPCX Project Format Enhancements (Issue #26)
+- **SpcxEditorSettings**: Editor state persistence
+  - Voice mute/solo/volume settings per channel
+  - Master volume and playback position
+  - Loop enable and loop count settings
+  - Tempo adjustment factor
+
+- **SpcxAnalysisResult**: Cached analysis data
+  - Detected driver name and confidence level
+  - Sample information with memory offsets
+  - Memory usage statistics (code, samples, echo buffer, free space)
+
+- **Enhanced SPCX Structure**:
+  - `manifest.json`: Project metadata and format version
+  - `spc/ram.bin`: 64KB SPC RAM data
+  - `spc/dsp.bin`: 128-byte DSP registers
+  - `spc/cpu.json`: CPU state (PC, A, X, Y, PSW, SP)
+  - `metadata.json`: ID666 tag information
+  - `settings.json`: Editor state (new)
+  - `analysis.json`: Driver detection results (new)
+
+### Changed
+- **SpcxFile.ImportFromSpc()**: Now uses SpcFile class for proper parsing
+- **SpcxFile.ExportToSpcBytes()**: Generates valid SPC files with full ID666 tags
+
+### Technical Notes
+- SPC files must have valid "SNES-SPC700 Sound File Data" header
+- ID666 text format used by default for maximum compatibility
+- Analysis runs automatically on import, can be re-run with `RunAnalysis()`
+- SPCX format uses ZIP compression with JSON manifests for editability
 
 ## [0.3.0] - 2026-01-25
 

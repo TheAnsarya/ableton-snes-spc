@@ -1,6 +1,6 @@
 # SPCX File Format Specification
 
-Version 1.0 - Draft
+Version 1.1 - Implementation
 
 ## Overview
 
@@ -24,7 +24,10 @@ myproject.spcx (ZIP archive)
 ├── spc/
 │   ├── ram.bin             # 64KB SPC700 RAM
 │   ├── dsp.bin             # 128 bytes DSP registers
+│   ├── cpu.json            # CPU state (PC, A, X, Y, PSW, SP)
 │   └── metadata.json       # ID666 and extended metadata
+├── settings.json           # Editor state (v1.1)
+├── analysis.json           # Driver detection results (v1.1)
 ├── samples/
 │   ├── index.json          # Sample directory
 │   ├── 00_bass.wav         # Original WAV (optional)
@@ -39,7 +42,7 @@ myproject.spcx (ZIP archive)
 │       ├── 1.json          # Channel 1 sequence
 │       └── ...
 ├── editor/
-│   ├── state.json          # Editor state (solo/mute, zoom, etc.)
+│   ├── state.json          # Extended editor state
 │   ├── markers.json        # User markers and annotations
 │   └── history.json        # Undo/redo history (optional)
 └── assets/
@@ -84,6 +87,30 @@ Raw 65,536 bytes of SPC700 RAM exactly as it would appear in an SPC file.
 
 Raw 128 bytes of DSP registers.
 
+### spc/cpu.json
+
+CPU register state for accurate SPC restoration:
+
+```json
+{
+  "PC": 1024,
+  "A": 0,
+  "X": 0,
+  "Y": 0,
+  "PSW": 0,
+  "SP": 239
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| PC | Program Counter (0-65535) |
+| A | Accumulator register (0-255) |
+| X | X index register (0-255) |
+| Y | Y index register (0-255) |
+| PSW | Program Status Word (flags) |
+| SP | Stack Pointer (0-255) |
+
 ### spc/metadata.json
 
 ```json
@@ -107,6 +134,87 @@ Raw 128 bytes of DSP registers.
   }
 }
 ```
+
+## Editor Settings (v1.1)
+
+### settings.json
+
+Stores the current editing state for session restoration:
+
+```json
+{
+  "voiceMutes": [false, false, false, false, false, false, false, false],
+  "voiceSolos": [false, false, false, false, false, false, false, false],
+  "voiceVolumes": [100, 100, 100, 100, 100, 100, 100, 100],
+  "masterVolume": 100,
+  "playbackPosition": 0,
+  "loopEnabled": true,
+  "loopCount": 2,
+  "tempoAdjustment": 1.0
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| voiceMutes | bool[8] | Mute state for each of the 8 SPC voices |
+| voiceSolos | bool[8] | Solo state for each voice |
+| voiceVolumes | int[8] | Volume level 0-100 for each voice |
+| masterVolume | int | Master output volume 0-100 |
+| playbackPosition | int | Playback position in samples |
+| loopEnabled | bool | Whether playback loops |
+| loopCount | int | Number of loops before stopping (-1 = infinite) |
+| tempoAdjustment | float | Tempo multiplier (1.0 = normal) |
+
+## Analysis Results (v1.1)
+
+### analysis.json
+
+Cached driver detection and memory analysis results:
+
+```json
+{
+  "driverName": "NSPC",
+  "confidence": 0.95,
+  "samples": [
+    {
+      "index": 0,
+      "name": "Bass",
+      "offset": 8192,
+      "size": 2048,
+      "loopPoint": 512,
+      "sampleRate": 16000
+    }
+  ],
+  "memoryUsage": {
+    "codeSize": 4096,
+    "sampleDataSize": 32000,
+    "echoBufferSize": 8192,
+    "freeSpace": 21248
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| driverName | Detected sound driver (NSPC, Akao, HAL Lab, Capcom, Konami, Rare, Enix, Hudson, Namco, Taito, or Unknown) |
+| confidence | Detection confidence level 0.0-1.0 |
+| samples | Extracted sample information array |
+| memoryUsage | Breakdown of ARAM usage by category |
+
+### Supported Drivers
+
+| Driver | Games Using It |
+|--------|----------------|
+| NSPC | Most Nintendo-developed games |
+| Akao | Square games (Final Fantasy, Chrono Trigger) |
+| HAL Lab | Kirby series, Smash Bros |
+| Capcom | Mega Man X, Street Fighter |
+| Konami | Castlevania, Contra III |
+| Rare | Donkey Kong Country series |
+| Enix | ActRaiser, Soul Blazer |
+| Hudson | Bomberman, Adventure Island |
+| Namco | Tales series |
+| Taito | Space Invaders, Bust-a-Move |
 
 ## Sample Directory
 
