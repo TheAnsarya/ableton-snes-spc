@@ -26,6 +26,7 @@ find the most important issues that actually need implementation with an SPC edi
 
 find the most important issues that actually need implementation with an SPC editor and work on them; update issues, todolists, documentation plans, etc. and update session/chat logs; continue;
 
+Make sure that you're not implementing features that do not translate back to SPC files and limit the file to sounds, channels, and effects (outside of creating the samples themselves) that work on and actual spc chip and snes; continue;
 
 
 
