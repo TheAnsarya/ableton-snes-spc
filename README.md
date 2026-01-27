@@ -4,6 +4,8 @@
 **Status**: Feature Complete 🎉  
 **License**: MIT
 
+> 📋 **[Testing Quick Start Guide](TESTING_QUICKSTART.md)** - Help us test! Install the plugin and try the core workflow.
+
 A VST3 plugin for Ableton Live (and other DAWs) that enables editing and playback of SNES SPC music files with full hardware-accurate emulation. Includes complete custom GUI with waveform visualization, spectrum analyzer, and preset browser.
 
 ---
