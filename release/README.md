@@ -1,0 +1,334 @@
+# Ableton SNES SPC Plugin
+
+**Current Version**: 0.4.0 Beta  
+**Status**: Feature Complete 🎉  
+**License**: MIT
+
+> 📋 **[Testing Quick Start Guide](TESTING_QUICKSTART.md)** - Help us test! Install the plugin and try the core workflow.
+
+A VST3 plugin for Ableton Live (and other DAWs) that enables editing and playback of SNES SPC music files with full hardware-accurate emulation. Includes complete custom GUI with waveform visualization, spectrum analyzer, and preset browser.
+
+---
+
+## 🎯 Project Vision
+
+Create a professional-grade audio plugin that brings SNES music composition directly into modern DAWs, allowing artists to:
+
+- **Import** existing SPC files and edit them
+- **Compose** new SNES music with authentic sound
+- **Export** to valid SPC format playable on real hardware
+- **Collaborate** using a rich project format (.spcx) that preserves all editing state
+
+---
+
+## 📥 Installation
+
+### Beta Release (v0.4.0)
+
+> ⚠️ **Beta Software**: This is a beta release. Core audio functionality is stable. Full custom GUI with visualizers, preset browser, and MIDI learn is included.
+
+**Download**: [Latest Release](https://github.com/TheAnsarya/ableton-snes-spc/releases)
+
+### Supported DAWs
+
+| DAW | Versions | Status |
+|-----|----------|--------|
+| **Ableton Live** | 10.1+, 11, 12 | ✅ Fully Supported |
+| FL Studio | 20+ | ✅ Supported |
+| REAPER | 6+ | ✅ Supported |
+| Studio One | 5+ | ✅ Supported |
+| Bitwig Studio | 4+ | ✅ Supported |
+| Cubase | 10+ | ✅ Supported |
+
+> **One installer for all versions** - The same VST3 plugin works across all supported DAWs and versions.
+
+### Quick Install (Windows)
+
+**Option 1: Automated Install**
+```powershell
+# Extract the release ZIP, then run:
+.\install.ps1 -UserInstall    # No admin required
+# OR
+.\install.ps1                 # System-wide (requires admin)
+```
+
+**Option 2: Manual Install**
+1. Download from releases
+2. Extract `SnesSpcVst3.vst3` folder to:
+   - User: `%LOCALAPPDATA%\Programs\Common\VST3\`
+   - System: `C:\Program Files\Common Files\VST3\`
+3. Rescan plugins in your DAW
+
+For detailed build instructions, see [BUILDING.md](docs/BUILDING.md).
+
+---
+
+## ⚡ Quick Start
+
+1. Load the plugin on an audio track in your DAW
+2. Use the plugin editor window or DAW automation parameters
+3. Use "Play/Pause" parameter to start playback
+4. Control individual voices with mute/solo/volume parameters
+
+For complete usage guide, see [USER_GUIDE.md](docs/USER_GUIDE.md).
+
+---
+
+## ✨ Features (v0.4.0 Beta)
+
+### Core Emulation ✅
+- Complete SPC700 CPU emulation (all 256 instructions)
+- S-DSP audio processor with 8-voice stereo output
+- Hardware-accurate BRR sample decompression and encoding
+- Echo/reverb effects, ADSR envelopes, FIR filters
+- Cycle-accurate timing
+
+### Custom GUI ✅ (Complete in v0.3.0+)
+- **WaveformView**: Real-time audio visualization with zoom/scroll
+- **SpectrumView**: FFT-based frequency analyzer with peak hold
+- **PresetBrowser**: SPC file browser with search/filter/sort
+- **ViewSwitcher**: Tab-based panel management
+- **KeyboardHandler**: Hotkeys (Space=Play, Esc=Stop, Arrows=Volume)
+- **MidiLearnHandler**: MIDI CC mapping with save/load presets
+- Full VSTGUI 4.x integration
+
+### File Formats ✅ (NEW in v0.4.0)
+- **SPC Import**: Full ID666 tag support (text and binary formats)
+- **SPC Export**: Generate valid SPC files with metadata
+- **SPCX Project**: ZIP-based project format with JSON manifests
+- **Driver Detection**: Auto-detect 10+ sound drivers (NSPC, Akao, HAL Lab, Capcom, Konami, Rare, Enix, Hudson, Namco, Taito)
+- **Analysis Caching**: Memory usage, sample info persistence
+- **Editor State**: Voice mutes/solos/volumes saved in projects
+
+### Audio Engine ✅
+- Real-time playback at 32 kHz (resampled to any DAW rate)
+- Per-voice mute/solo/volume controls (8 voices)
+- Master volume control
+- Loop enable/disable
+- Seek to position
+- Waveform capture for visualization
+
+### MIDI Support ✅
+- MIDI note-on triggers voice playback (C3-G3 = Voice 0-7)
+- MIDI note-off for voice release
+- Velocity controls voice volume
+- MIDI Learn for CC parameter mapping
+
+### VST3 Integration ✅
+- 35+ automatable parameters
+- DAW transport sync
+- Tempo and time signature awareness
+- State save/restore
+- Preset management
+
+---
+
+## 🎮 What is SPC?
+
+SPC files capture the complete state of the SNES's Sony SPC700 audio chip, including:
+
+- 64KB of audio RAM
+- 8 simultaneous sound channels
+- BRR-compressed samples
+- Echo/reverb effects
+- Sequence data (music notation)
+
+## 🔌 Plugin Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    VST3 Plugin Host (Ableton)                │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              SNES SPC Plugin (VST3)                  │   │
+│  ├─────────────────────────────────────────────────────┤   │
+│  │                                                     │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌────────────┐  │   │
+│  │  │   UI Layer  │  │  Editor     │  │  Transport │  │   │
+│  │  │  (WPF/MAUI) │  │  (Channels) │  │  Control   │  │   │
+│  │  └──────┬──────┘  └──────┬──────┘  └─────┬──────┘  │   │
+│  │         │                │               │         │   │
+│  │  ┌──────┴────────────────┴───────────────┴──────┐  │   │
+│  │  │              Core Engine (.NET 10)            │  │   │
+│  │  ├───────────────────────────────────────────────┤  │   │
+│  │  │  ┌─────────┐  ┌─────────┐  ┌──────────────┐  │  │   │
+│  │  │  │  SPC700 │  │   DSP   │  │     BRR      │  │  │   │
+│  │  │  │   CPU   │  │ (S-DSP) │  │ Codec/Render │  │  │   │
+│  │  │  └─────────┘  └─────────┘  └──────────────┘  │  │   │
+│  │  │  ┌─────────┐  ┌─────────┐  ┌──────────────┐  │  │   │
+│  │  │  │ Project │  │ Import/ │  │   Sequence   │  │  │   │
+│  │  │  │  (SPCX) │  │  Export │  │   Compiler   │  │  │   │
+│  │  │  └─────────┘  └─────────┘  └──────────────┘  │  │   │
+│  │  └───────────────────────────────────────────────┘  │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 📁 File Formats
+
+### Input: SPC (.spc)
+
+Standard SNES music file format containing:
+- SPC700 RAM snapshot (64KB)
+- DSP registers (128 bytes)
+- ID666 metadata (song info)
+
+### Project: SPCX (.spcx) ✅ Implemented
+
+Custom extended format for rich editing:
+- Full SPC data (RAM, DSP, CPU state)
+- ID666 metadata (text and binary formats)
+- Editor settings (voice mutes/solos/volumes)
+- Cached analysis (driver detection, memory usage)
+- ZIP archive with JSON manifests for editability
+- Undo/redo history
+- Annotations and markers
+
+### Output: SPC (.spc)
+
+Valid SPC file playable on:
+- Real SNES hardware (via flash cart)
+- SPC players and emulators
+
+---
+
+## 🔌 Plugin Architecture
+
+```text
+┌─────────────────────────────────────────┐
+│     VST3 Plugin Host (DAW)              │
+├─────────────────────────────────────────┤
+│  ┌───────────────────────────────────┐  │
+│  │   SNES SPC Plugin (VST3/C++)      │  │
+│  │   ├─ Processor (Audio Thread)     │  │
+│  │   ├─ Controller (UI Thread)       │  │
+│  │   │   └─ VSTGUI Custom Views      │  │
+│  │   └─ .NET Host (Interop)          │  │
+│  │       ↓                            │  │
+│  │   ┌───────────────────────────┐   │  │
+│  │   │ SpcPlugin.Core (.NET 10)  │   │  │
+│  │   ├─ SpcEngine (Orchestration)│   │  │
+│  │   ├─ Spc700 (CPU Emulator)    │   │  │
+│  │   ├─ SDsp (Audio Processor)   │   │  │
+│  │   ├─ BrrCodec (Compression)   │   │  │
+│  │   ├─ SpcFile (Import/Export)  │   │  │
+│  │   ├─ SpcxFile (Project Format)│   │  │
+│  │   ├─ SpcAnalyzer (Detection)  │   │  │
+│  │   ├─ MidiProcessor            │   │  │
+│  │   └─ ProjectManager           │   │  │
+│  └───────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## 🛠️ Technology Stack
+
+| Component         | Technology                 |
+| ----------------- | -------------------------- |
+| Plugin Framework  | VST3 SDK + VSTGUI 4.x      |
+| Core Logic        | C# / .NET 10               |
+| UI Framework      | VSTGUI (custom views)      |
+| Audio Processing  | Native interop             |
+| Build System      | CMake + MSBuild            |
+| Testing           | xUnit                      |
+
+## 🚧 SNES Hardware Constraints
+
+The plugin enforces these limitations to ensure valid SPC output:
+
+| Constraint    | Value    | Plugin Behavior            |
+| ------------- | -------- | -------------------------- |
+| Channels      | 8 max    | Hard limit, no workaround  |
+| Sample RAM    | 64KB     | Memory usage meter         |
+| Sample Rate   | ≤32kHz   | Auto-resample if needed    |
+| Sample Format | BRR      | Auto-encode from WAV       |
+| Echo Buffer   | 0-30KB   | Reduce if exceeds          |
+
+## 📂 Repository Structure
+
+```text
+ableton-snes-spc/
+├── docs/                    # Documentation
+│   ├── architecture/        # Technical architecture docs
+│   ├── formats/             # File format specifications
+│   ├── guides/              # User and developer guides
+│   └── research/            # Research notes and references
+├── src/                     # Source code
+│   ├── SpcPlugin.Core/      # Core engine (.NET)
+│   ├── SpcPlugin.Vst/       # VST3 wrapper (C++/CLI)
+│   ├── SpcPlugin.Ui/        # UI components
+│   └── SpcPlugin.Tests/     # Unit tests
+├── tools/                   # Build and development tools
+├── samples/                 # Sample SPC files for testing
+├── ~docs/                   # Development documentation
+│   ├── session-logs/        # AI session logs
+│   ├── chat-logs/           # Chat history
+│   └── plans/               # Planning documents
+└── build/                   # Build output
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- .NET 10 SDK
+- Visual Studio 2022 Build Tools with C++ workload
+- CMake 3.21+
+- VST3 SDK (cloned to `C:\vst3sdk`)
+- Ableton Live 11+ (for testing) or another VST3 host
+
+### Building
+
+```powershell
+# Clone the repository
+git clone https://github.com/TheAnsarya/ableton-snes-spc.git
+cd ableton-snes-spc
+
+# Clone VST3 SDK (if not already installed)
+git clone --recursive https://github.com/steinbergmedia/vst3sdk.git C:\vst3sdk
+
+# Build the VST3 plugin
+$env:VST3_SDK_ROOT = "C:/vst3sdk"
+.\build-vst3.ps1
+
+# Install to user VST3 folder
+.\build-vst3.ps1 -Install
+
+# Or install manually
+Copy-Item -Recurse build\VST3\Debug\SnesSpcVst3.vst3 "$env:LOCALAPPDATA\Programs\Common\VST3\"
+```
+
+### Build Options
+
+```powershell
+.\build-vst3.ps1              # Debug build
+.\build-vst3.ps1 -Release     # Release build
+.\build-vst3.ps1 -Clean       # Clean build
+.\build-vst3.ps1 -Install     # Build and install
+.\build-vst3.ps1 -NativeAot   # Build with Native AOT
+```
+
+## 🎨 Plugin Icon
+
+The plugin features a custom icon with a musical note surrounded by colorful Japanese Super Famicom ABXY buttons.
+
+To regenerate the icon:
+```powershell
+pip install svglib reportlab Pillow
+python tools/generate_icon.py
+```
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+## 🤝 Contributing
+
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+
+## 📚 Related Projects
+
+- [GameInfo](https://github.com/TheAnsarya/GameInfo) - SNES audio tools library
+- [VST.NET](https://github.com/obiwanjacobi/vst.net) - VST for .NET framework

@@ -392,6 +392,11 @@ public sealed class SpcxEditorSettings {
 	public float[] VoiceVolumes { get; set; } = [1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f];
 
 	/// <summary>
+	/// Voice pan positions (8 voices, -1.0 to 1.0, 0 = center).
+	/// </summary>
+	public float[] VoicePans { get; set; } = [0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f];
+
+	/// <summary>
 	/// Master volume (0.0-1.0).
 	/// </summary>
 	public float MasterVolume { get; set; } = 1.0f;
@@ -420,6 +425,61 @@ public sealed class SpcxEditorSettings {
 	/// Selected sample index for editing.
 	/// </summary>
 	public int SelectedSampleIndex { get; set; } = -1;
+
+	/// <summary>
+	/// Currently selected voice index for editing (0-7).
+	/// </summary>
+	public int SelectedVoiceIndex { get; set; }
+
+	/// <summary>
+	/// View-specific display settings.
+	/// </summary>
+	public SpcxViewSettings ViewSettings { get; set; } = new();
+
+	/// <summary>
+	/// MIDI CC mappings for automation.
+	/// </summary>
+	public List<SpcxMidiMapping> MidiMappings { get; set; } = [];
+}
+
+/// <summary>
+/// View display settings.
+/// </summary>
+public sealed class SpcxViewSettings {
+	/// <summary>
+	/// Show spectrum analyzer.
+	/// </summary>
+	public bool ShowSpectrum { get; set; } = true;
+
+	/// <summary>
+	/// Show voice info panel.
+	/// </summary>
+	public bool ShowVoiceInfo { get; set; } = true;
+
+	/// <summary>
+	/// Waveform color scheme name.
+	/// </summary>
+	public string WaveformColorScheme { get; set; } = "default";
+}
+
+/// <summary>
+/// MIDI CC mapping for a parameter.
+/// </summary>
+public sealed class SpcxMidiMapping {
+	/// <summary>
+	/// Parameter name (e.g., "masterVolume", "voice1Volume").
+	/// </summary>
+	public string Param { get; set; } = "";
+
+	/// <summary>
+	/// MIDI channel (1-16).
+	/// </summary>
+	public int Channel { get; set; } = 1;
+
+	/// <summary>
+	/// MIDI CC number (0-127).
+	/// </summary>
+	public int CC { get; set; }
 }
 
 /// <summary>
@@ -430,6 +490,16 @@ public sealed class SpcxAnalysisResult {
 	/// Detected sound driver name.
 	/// </summary>
 	public string DetectedDriver { get; set; } = "Unknown";
+
+	/// <summary>
+	/// Driver version if detected.
+	/// </summary>
+	public string? DriverVersion { get; set; }
+
+	/// <summary>
+	/// Detection confidence (0.0-1.0).
+	/// </summary>
+	public float Confidence { get; set; }
 
 	/// <summary>
 	/// Number of samples found.
@@ -445,6 +515,36 @@ public sealed class SpcxAnalysisResult {
 	/// Memory usage breakdown.
 	/// </summary>
 	public SpcxMemoryUsage? MemoryUsage { get; set; }
+
+	/// <summary>
+	/// Echo effect settings from DSP.
+	/// </summary>
+	public SpcxEchoSettings? EchoSettings { get; set; }
+
+	/// <summary>
+	/// Voice usage analysis (which voice plays which sample).
+	/// </summary>
+	public List<SpcxVoiceUsage> VoiceUsage { get; set; } = [];
+}
+
+/// <summary>
+/// Voice-to-sample mapping from analysis.
+/// </summary>
+public sealed class SpcxVoiceUsage {
+	/// <summary>
+	/// Voice index (0-7).
+	/// </summary>
+	public int Voice { get; set; }
+
+	/// <summary>
+	/// Sample index this voice uses.
+	/// </summary>
+	public int Sample { get; set; }
+
+	/// <summary>
+	/// Detected purpose (e.g., "Melody", "Bass", "Drums").
+	/// </summary>
+	public string? Purpose { get; set; }
 }
 
 /// <summary>
@@ -457,6 +557,26 @@ public sealed class SpcxSampleInfo {
 	public int LoopAddress { get; set; }
 	public int Size { get; set; }
 	public bool HasLoop { get; set; }
+
+	/// <summary>
+	/// User-defined sample name.
+	/// </summary>
+	public string? Name { get; set; }
+
+	/// <summary>
+	/// Sample block count (BRR blocks).
+	/// </summary>
+	public int BlockCount { get; set; }
+
+	/// <summary>
+	/// Decoded sample count (16 samples per BRR block).
+	/// </summary>
+	public int SampleCount { get; set; }
+
+	/// <summary>
+	/// Estimated musical note (e.g., "C4").
+	/// </summary>
+	public string? EstimatedNote { get; set; }
 }
 
 /// <summary>
@@ -467,4 +587,34 @@ public sealed class SpcxMemoryUsage {
 	public int EchoBytes { get; set; }
 	public int DriverBytes { get; set; }
 	public int FreeBytes { get; set; }
+}
+
+/// <summary>
+/// Echo effect settings from DSP analysis.
+/// </summary>
+public sealed class SpcxEchoSettings {
+	/// <summary>
+	/// Echo delay in 16ms units (0-15).
+	/// </summary>
+	public int Delay { get; set; }
+
+	/// <summary>
+	/// Echo feedback level (-128 to 127).
+	/// </summary>
+	public int Feedback { get; set; }
+
+	/// <summary>
+	/// Whether echo is enabled.
+	/// </summary>
+	public bool Enabled { get; set; }
+
+	/// <summary>
+	/// Echo buffer start address in RAM.
+	/// </summary>
+	public int BufferStart { get; set; }
+
+	/// <summary>
+	/// FIR filter coefficients (8 taps).
+	/// </summary>
+	public sbyte[] FirCoefficients { get; set; } = new sbyte[8];
 }

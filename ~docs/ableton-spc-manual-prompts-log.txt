@@ -28,6 +28,7 @@ find the most important issues that actually need implementation with an SPC edi
 
 Make sure that you're not implementing features that do not translate back to SPC files and limit the file to sounds, channels, and effects (outside of creating the samples themselves) that work on and actual spc chip and snes; continue;
 
+make a release with an easy install of the ableton plugin so I can test it and create a manual testing document starting with just installing the plugin and opening an spc file and editing it and saving it as an spcx file and exdporting back to an spc; link the manual testing in the main `readme.md` file at the top as "Things todo for testing" or whatever; continue;
 
 
 
