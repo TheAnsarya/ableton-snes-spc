@@ -29,9 +29,34 @@ Create a professional-grade audio plugin that brings SNES music composition dire
 
 **Download**: [Latest Release](https://github.com/TheAnsarya/ableton-snes-spc/releases)
 
-**Quick Install (Windows)**:
+### Supported DAWs
+
+| DAW | Versions | Status |
+|-----|----------|--------|
+| **Ableton Live** | 10.1+, 11, 12 | ✅ Fully Supported |
+| FL Studio | 20+ | ✅ Supported |
+| REAPER | 6+ | ✅ Supported |
+| Studio One | 5+ | ✅ Supported |
+| Bitwig Studio | 4+ | ✅ Supported |
+| Cubase | 10+ | ✅ Supported |
+
+> **One installer for all versions** - The same VST3 plugin works across all supported DAWs and versions.
+
+### Quick Install (Windows)
+
+**Option 1: Automated Install**
+```powershell
+# Extract the release ZIP, then run:
+.\install.ps1 -UserInstall    # No admin required
+# OR
+.\install.ps1                 # System-wide (requires admin)
+```
+
+**Option 2: Manual Install**
 1. Download from releases
-2. Extract to `%APPDATA%\VST3\` or `C:\Program Files\Common Files\VST3\`
+2. Extract `SnesSpcVst3.vst3` folder to:
+   - User: `%LOCALAPPDATA%\Programs\Common\VST3\`
+   - System: `C:\Program Files\Common Files\VST3\`
 3. Rescan plugins in your DAW
 
 For detailed build instructions, see [BUILDING.md](docs/BUILDING.md).

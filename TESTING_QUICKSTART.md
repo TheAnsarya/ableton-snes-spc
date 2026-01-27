@@ -13,7 +13,9 @@ This guide walks through the core testing workflow: installing the plugin, openi
 Before starting, ensure you have:
 
 - [ ] Windows 10/11 (64-bit)
-- [ ] A VST3-compatible DAW (Ableton Live, FL Studio, REAPER, etc.)
+- [ ] A VST3-compatible DAW:
+  - **Ableton Live 10.1+, 11, or 12** (all supported with same plugin)
+  - FL Studio 20+, REAPER 6+, Studio One 5+, Bitwig 4+, Cubase 10+
 - [ ] One or more SPC files for testing
 - [ ] The release package (`SnesSpcVst3-0.4.0-beta-win64.zip`)
 
@@ -59,13 +61,23 @@ Notes:
 
 ## Test 2: Loading the Plugin in DAW
 
-### Steps (Ableton Live)
+### Supported Ableton Versions
+
+| Version | Support Status | Notes |
+|---------|---------------|-------|
+| Ableton Live 10.1+ | ✅ Supported | VST3 support added in 10.1 |
+| Ableton Live 11 | ✅ Supported | Full compatibility |
+| Ableton Live 12 | ✅ Supported | Current version, fully tested |
+
+> **Note**: The same plugin works with all supported versions. No separate installers needed.
+
+### Steps (Ableton Live 10/11/12)
 
 1. **Open** Ableton Live
 
 2. **Rescan plugins:**
-   - Go to `Options` > `Preferences` > `Plug-ins`
-   - Click `Rescan plug-ins`
+   - **Live 12**: `Settings` > `Plug-ins` > `Rescan`
+   - **Live 10/11**: `Options` > `Preferences` > `Plug-ins` > `Rescan`
    - Wait for scan to complete
 
 3. **Find the plugin:**
@@ -80,9 +92,11 @@ Notes:
 
 | DAW | Plugin Location |
 |-----|-----------------|
-| FL Studio | Plugin Manager > Scan, then Channels > Add One > SNES SPC Player |
-| REAPER | FX > Add > VST3i: SNES SPC Player |
-| Studio One | Effects > Instruments > SNES SPC Player |
+| FL Studio 20+ | Plugin Manager > Scan, then Channels > Add One > SNES SPC Player |
+| REAPER 6+ | FX > Add > VST3i: SNES SPC Player |
+| Studio One 5+ | Effects > Instruments > SNES SPC Player |
+| Bitwig Studio 4+ | Add Device > VST3 > SNES SPC Player |
+| Cubase 10+ | Add Track Instrument > SNES SPC Player |
 
 ### Expected Result
 - [ ] Plugin appears in plugin list after rescan
@@ -92,7 +106,7 @@ Notes:
 ### Notes
 ```
 Date: 
-DAW Version: 
+DAW Name & Version: 
 Result: PASS / FAIL
 Notes: 
 ```
