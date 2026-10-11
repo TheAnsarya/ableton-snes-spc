@@ -7,6 +7,10 @@
 #include <filesystem>
 #include <cstring>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 namespace SnesSpc {
 
 SpcProcessor::SpcProcessor() {
@@ -33,17 +37,32 @@ Steinberg::tresult PLUGIN_API SpcProcessor::initialize(Steinberg::FUnknown* cont
 	dotnetHost_ = std::make_unique<DotNetHost>();
 
 	// Find the native library next to the VST3 plugin
-	// The library will be built as SpcPlugin.Core.dll (Native AOT)
-	// TODO: Make this path configurable or detect properly
+	std::string libraryPath;
+
 #ifdef _WIN32
-	const char* libraryName = "SpcPlugin.Core.dll";
+	// Get the path to this DLL (the VST3 plugin)
+	HMODULE hModule = nullptr;
+	if (GetModuleHandleExA(
+			GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			reinterpret_cast<LPCSTR>(&SpcProcessor::createInstance),
+			&hModule)) {
+		char modulePath[MAX_PATH];
+		if (GetModuleFileNameA(hModule, modulePath, MAX_PATH) > 0) {
+			std::filesystem::path pluginPath(modulePath);
+			libraryPath = (pluginPath.parent_path() / "SpcPlugin.Core.dll").string();
+		}
+	}
+
+	// Fallback to just the filename if we couldn't get the path
+	if (libraryPath.empty()) {
+		libraryPath = "SpcPlugin.Core.dll";
+	}
 #else
-	const char* libraryName = "libSpcPlugin.Core.so";
+	libraryPath = "libSpcPlugin.Core.so";
 #endif
 
-	// For now, assume library is in same directory as plugin
-	// In production, this should be properly packaged with the VST3
-	if (!dotnetHost_->initialize(libraryName)) {
+	// Try to initialize with the full path
+	if (!dotnetHost_->initialize(libraryPath.c_str())) {
 		// Initialization failed, but don't fail the whole plugin
 		// It will just output silence until a library is found
 		dotnetHost_.reset();

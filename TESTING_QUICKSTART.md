@@ -1,4 +1,4 @@
-# SNES SPC Plugin - Manual Testing Quick Start
+**# SNES SPC Plugin - Manual Testing Quick Start
 
 > **Version**: 0.4.0-beta  
 > **Date**: January 2026  

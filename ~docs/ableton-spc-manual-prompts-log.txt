@@ -30,8 +30,25 @@ Make sure that you're not implementing features that do not translate back to SP
 
 make a release with an easy install of the ableton plugin so I can test it and create a manual testing document starting with just installing the plugin and opening an spc file and editing it and saving it as an spcx file and exdporting back to an spc; link the manual testing in the main `readme.md` file at the top as "Things todo for testing" or whatever; continue;
 
+make sure we have two releases or that the plugin works in both ableton 10 and the most recent version of ableton; update the release if code is updated or the ableton10/current installers are new ; continue;
 
+install the plugin into ableton 10
 
+I've found the plugin! thank you! please tell me how to load an spc file and create an spcx project file, and play it and some instructions for some basic tasks like switching samples and updating some notes, and save the spc and spcx and export back to spc, ; save the output in a ~docs file but also tell me, or open the file ; make durre spcx is fully documented and add anything that would be useful in the project file and work it, but only after making the manual testing stuff; continue;
+
+Failed to create the VST3 plug-in "SNES SPC Player" The VST3 plug-in could not be opened.
+
+it's closed, install it and then give me basic spc openining, instructions and spcx creation and editing and saving and export instructions, I know you were supposed to make those already but I didn't find them exactly, so open them and tell me what file I should follow;
+
+Nope, same error: Failed to create the VST3 plug-in "SNES SPC Player" The VST3 plug-in could not be opened.; fix this error (we already reinstalled plugin using release build);
+
+After recanning plugins, when I try to drag "SNES SPC Player" to a MIDI channel I get this same error: `Failed to create the VST3 plug-in "SNES SPC Player" The VST3 plug-in could not be opened`.; fix this error (we already reinstalled plugin using release build);
+
+same stupid error, I have terminated the process that had a lock on the plugin so rebuild and regenerate it (the plugin) to `C:\Users\me\AppData\Local\Programs\Common\VST3\` in the release AoT version and reinstall the plugin into Ableton 10 so we can try it again;
+
+I did that and got the same error;
+
+ok, go
 
 
 
